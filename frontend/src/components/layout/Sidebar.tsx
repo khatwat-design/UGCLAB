@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   Shield,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -29,6 +30,7 @@ const creatorLinks: SidebarLink[] = [
   { href: '/creator/portfolio', label: 'معرض الأعمال', icon: <BarChart3 className="w-5 h-5" /> },
   { href: '/creator/earnings', label: 'الأرباح', icon: <DollarSign className="w-5 h-5" /> },
   { href: '/creator/messages', label: 'الرسائل', icon: <MessageSquare className="w-5 h-5" /> },
+  { href: '/kyc', label: 'توثيق الحساب', icon: <ShieldCheck className="w-5 h-5" /> },
   { href: '/creator/settings', label: 'الإعدادات', icon: <Settings className="w-5 h-5" /> },
 ];
 
@@ -38,6 +40,7 @@ const advertiserLinks: SidebarLink[] = [
   { href: '/advertiser/creators', label: 'المبدعين', icon: <Users className="w-5 h-5" /> },
   { href: '/advertiser/billing', label: 'الفواتير', icon: <DollarSign className="w-5 h-5" /> },
   { href: '/advertiser/messages', label: 'الرسائل', icon: <MessageSquare className="w-5 h-5" /> },
+  { href: '/kyc', label: 'توثيق الحساب', icon: <ShieldCheck className="w-5 h-5" /> },
   { href: '/advertiser/settings', label: 'الإعدادات', icon: <Settings className="w-5 h-5" /> },
 ];
 

@@ -67,6 +67,38 @@ export default function CreatorDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* KYC Banner */}
+      {user && user.kyc_status && user.kyc_status !== 'verified' && user.kyc_status !== 'not_submitted' && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-xl border p-4 flex items-start gap-3 ${
+            user.kyc_status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+          }`}
+        >
+          <div className="flex-1">
+            <p className={`text-sm font-bold ${user.kyc_status === 'rejected' ? 'text-red-800' : 'text-amber-800'}`}>
+              {user.kyc_status === 'rejected' ? 'لم يتم توثيق حسابك' : 'توثيق الحساب قيد المراجعة'}
+            </p>
+            <p className={`text-xs mt-0.5 ${user.kyc_status === 'rejected' ? 'text-red-600' : 'text-amber-600'}`}>
+              {user.kyc_status === 'rejected'
+                ? 'يرجى زيارة صفحة توثيق الحساب لمعرفة التفاصيل وإعادة رفع المستندات'
+                : 'مستنداتك قيد المراجعة من قبل فريق UGCLab'}
+            </p>
+          </div>
+          <Link
+            href="/kyc"
+            className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
+              user.kyc_status === 'rejected'
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-amber-600 text-white hover:bg-amber-700'
+            }`}
+          >
+            {user.kyc_status === 'rejected' ? 'إعادة الرفع' : 'عرض الحالة'}
+          </Link>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}

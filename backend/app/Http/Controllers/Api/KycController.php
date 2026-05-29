@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\KycDocument;
 use App\Models\AdminLog;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 
 class KycController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {}
+
     public function serveFile(Request $request, KycDocument $document)
     {
         // Only the document owner or admin can view the file
@@ -113,6 +118,21 @@ class KycController extends Controller
             'target_id' => $document->id,
             'metadata' => $validated,
         ]);
+
+        // Notify user
+        try {
+            $this->notificationService->send(
+                $user,
+                'kyc_' . $validated['status'],
+                [
+                    'message' => $validated['status'] === 'approved'
+                        ? 'تم توثيق حسابك بنجاح'
+                        : 'لم يتم توثيق حسابك' . ($validated['admin_notes'] ? ': ' . $validated['admin_notes'] : ''),
+                    'document_type' => $document->document_type,
+                    'admin_notes' => $validated['admin_notes'] ?? null,
+                ]
+            );
+        } catch (\Exception $e) {}
 
         return response()->json($document->fresh());
     }
