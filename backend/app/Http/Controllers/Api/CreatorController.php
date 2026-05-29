@@ -6,13 +6,18 @@ use App\Models\User;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Deliverable;
+use App\Models\SettlementRequest;
 use App\Enums\ApplicationStatus;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
 class CreatorController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {}
     public function dashboard()
     {
         $user = auth()->user();
@@ -79,6 +84,14 @@ class CreatorController extends Controller
             'proposed_rate' => $validated['proposed_rate'],
         ]);
 
+        try {
+            $this->notificationService->notifyNewApplication(
+                $campaign->advertiser,
+                auth()->user(),
+                $campaign
+            );
+        } catch (\Exception $e) {}
+
         return response()->json($application->load('campaign'), 201);
     }
 
@@ -136,7 +149,7 @@ class CreatorController extends Controller
             $campaign = $application->campaign;
             $advertiser = $campaign->advertiser;
             $creator = auth()->user();
-            \App\Services\NotificationService::send(
+            $this->notificationService->send(
                 $advertiser,
                 'new_deliverable',
                 [
@@ -148,6 +161,71 @@ class CreatorController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json($deliverable->load('application.campaign'), 201);
+    }
+
+    public function markReceived(CampaignApplication $application)
+    {
+        if ($application->creator_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($application->shipping_status !== 'shipped') {
+            return response()->json(['message' => 'Item has not been shipped yet'], 422);
+        }
+
+        $application->update([
+            'shipping_status' => 'received',
+            'received_at' => now(),
+        ]);
+
+        try {
+            $this->notificationService->notifyItemReceived(
+                $application->campaign->advertiser,
+                $application->campaign,
+                $application
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json($application->fresh());
+    }
+
+    public function settlementRequests()
+    {
+        return auth()->user()->settlementRequests()->latest()->paginate(12);
+    }
+
+    public function requestSettlement(Request $request)
+    {
+        $user = auth()->user();
+        $wallet = $user->wallet;
+
+        if (!$wallet || $wallet->pending_balance <= 0) {
+            return response()->json(['message' => 'No pending balance to settle'], 422);
+        }
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1', 'max:' . $wallet->pending_balance],
+        ]);
+
+        $settlementRequest = SettlementRequest::create([
+            'user_id' => $user->id,
+            'amount' => $validated['amount'],
+            'status' => 'pending',
+        ]);
+
+        // Notify all admins
+        try {
+            $admins = \App\Models\User::where('role', 'admin')->where('is_active', true)->get();
+            foreach ($admins as $admin) {
+                $this->notificationService->notifyNewSettlementRequest(
+                    $admin,
+                    $user,
+                    $validated['amount']
+                );
+            }
+        } catch (\Exception $e) {}
+
+        return response()->json($settlementRequest, 201);
     }
 
     public function earnings()

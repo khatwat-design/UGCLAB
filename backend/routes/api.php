@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\KycController;
 use App\Http\Controllers\Api\PortfolioController;
 use App\Http\Controllers\Api\MediaController;
+use App\Models\SettlementRequest;
 
 // Public routes (with rate limiting)
 Route::post('/auth/login', [AuthController::class, 'login'])
@@ -39,6 +40,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/campaigns/{campaign}/apply', [CreatorController::class, 'apply']);
         Route::get('/applications', [CreatorController::class, 'myApplications']);
         Route::post('/deliverables/{application}', [CreatorController::class, 'submitDeliverable']);
+        Route::post('/applications/{application}/mark-received', [CreatorController::class, 'markReceived']);
+        Route::get('/settlement-requests', [CreatorController::class, 'settlementRequests']);
+        Route::post('/settlement-requests', [CreatorController::class, 'requestSettlement']);
         Route::get('/earnings', [CreatorController::class, 'earnings']);
         Route::put('/profile', [CreatorController::class, 'updateProfile']);
     });
@@ -56,6 +60,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/campaigns/{campaign}/applications/{application}/reject', [AdvertiserController::class, 'rejectApplication']);
         Route::post('/deliverables/{deliverable}/approve', [AdvertiserController::class, 'approveDeliverable']);
         Route::post('/deliverables/{deliverable}/reject', [AdvertiserController::class, 'rejectDeliverable']);
+        Route::post('/deliverables/{deliverable}/request-revision', [AdvertiserController::class, 'requestRevision']);
+        Route::post('/campaigns/{campaign}/applications/{application}/ship', [AdvertiserController::class, 'markShipped']);
         Route::post('/invite/{creator}', [AdvertiserController::class, 'invite']);
         Route::get('/creators', [CreatorController::class, 'discoverCreators']);
     });
@@ -137,6 +143,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/payments/{payment}/release', [AdminController::class, 'releasePayment']);
         Route::post('/payments/{payment}/refund', [AdminController::class, 'refundPayment']);
         Route::get('/logs', [AdminController::class, 'logs']);
+        Route::get('/settlement-requests', [AdminController::class, 'settlementRequests']);
+        Route::post('/settlement-requests/{settlementRequest}/process', [AdminController::class, 'processSettlement']);
         Route::get('/kyc/pending', [KycController::class, 'pendingUsers']);
         Route::get('/kyc/users', [KycController::class, 'allUsers']);
         Route::post('/kyc/{document}/review', [KycController::class, 'review']);

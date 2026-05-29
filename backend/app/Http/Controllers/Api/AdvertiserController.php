@@ -12,11 +12,15 @@ use App\Models\Wallet;
 use App\Enums\ApplicationStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\PaymentStatus;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
 class AdvertiserController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {}
     public function dashboard()
     {
         $user = auth()->user();
@@ -139,6 +143,14 @@ class AdvertiserController extends Controller
             'status' => 'held',
         ]);
 
+        try {
+            $this->notificationService->notifyApplicationStatus(
+                $application->creator,
+                $campaign,
+                'accepted'
+            );
+        } catch (\Exception $e) {}
+
         return response()->json($application->fresh());
     }
 
@@ -153,6 +165,14 @@ class AdvertiserController extends Controller
         }
 
         $application->update(['status' => 'rejected']);
+
+        try {
+            $this->notificationService->notifyApplicationStatus(
+                $application->creator,
+                $campaign,
+                'rejected'
+            );
+        } catch (\Exception $e) {}
 
         return response()->json($application->fresh());
     }
@@ -171,7 +191,86 @@ class AdvertiserController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        try {
+            $this->notificationService->notifyDeliverableApproved(
+                $application->creator,
+                $campaign,
+                $deliverable
+            );
+        } catch (\Exception $e) {}
+
         return response()->json($deliverable->fresh());
+    }
+
+    public function requestRevision(Request $request, Deliverable $deliverable)
+    {
+        $validated = $request->validate([
+            'revision_notes' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $application = $deliverable->application;
+        $campaign = $application->campaign;
+
+        if ($campaign->advertiser_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($deliverable->status !== 'submitted') {
+            return response()->json(['message' => 'Deliverable must be submitted first'], 422);
+        }
+
+        $deliverable->update([
+            'status' => 'revision_requested',
+            'revision_notes' => $validated['revision_notes'],
+            'reviewed_at' => now(),
+        ]);
+
+        $application->update(['status' => 'revision_requested']);
+
+        try {
+            $this->notificationService->notifyRevisionRequested(
+                $application->creator,
+                $campaign,
+                $deliverable
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json($deliverable->fresh());
+    }
+
+    public function markShipped(Request $request, Campaign $campaign, CampaignApplication $application)
+    {
+        if ($campaign->advertiser_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($application->campaign_id !== $campaign->id) {
+            return response()->json(['message' => 'Invalid application'], 422);
+        }
+
+        if ($application->status !== 'accepted') {
+            return response()->json(['message' => 'Application must be accepted first'], 422);
+        }
+
+        $validated = $request->validate([
+            'tracking_number' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $application->update([
+            'shipping_status' => 'shipped',
+            'tracking_number' => $validated['tracking_number'] ?? null,
+            'shipped_at' => now(),
+        ]);
+
+        try {
+            $this->notificationService->notifyItemShipped(
+                $application->creator,
+                $campaign,
+                $application
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json($application->fresh());
     }
 
     public function invite(User $creator)
@@ -211,6 +310,14 @@ class AdvertiserController extends Controller
             'notes' => $validated['feedback'],
             'reviewed_at' => now(),
         ]);
+
+        try {
+            $this->notificationService->notifyDeliverableRejected(
+                $application->creator,
+                $campaign,
+                $deliverable
+            );
+        } catch (\Exception $e) {}
 
         return response()->json($deliverable->fresh());
     }

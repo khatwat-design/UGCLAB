@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import StatsCard from '@/components/shared/StatsCard';
 import { Toaster, toast } from 'react-hot-toast';
-import { ChevronLeft, ChevronRight, Wallet, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wallet, X, Send } from 'lucide-react';
 import { EarningsSkeleton } from '@/components/shared/Skeleton';
 
 export default function CreatorEarnings() {
@@ -15,13 +15,45 @@ export default function CreatorEarnings() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState('zain_cash');
   const [submitting, setSubmitting] = useState(false);
+  const [showSettlementModal, setShowSettlementModal] = useState(false);
+  const [settlementAmount, setSettlementAmount] = useState('');
+  const [settlements, setSettlements] = useState<any[]>([]);
+  const [settlementSubmitting, setSettlementSubmitting] = useState(false);
 
   const fetchEarnings = (p: number) => {
     setLoading(true);
     api.get(`/creator/earnings?page=${p}`).then((r) => setData(r.data)).finally(() => setLoading(false));
   };
 
+  const fetchSettlements = async () => {
+    try {
+      const res = await api.get('/creator/settlement-requests');
+      setSettlements(res.data.data || []);
+    } catch {}
+  };
+
   useEffect(() => { fetchEarnings(page); }, [page]);
+
+  const handleSettlementRequest = async () => {
+    const amount = parseFloat(settlementAmount);
+    if (!amount || amount <= 0) return;
+    if (amount > (data?.pending || 0)) {
+      toast.error('المبلغ المعلق غير كافٍ');
+      return;
+    }
+    setSettlementSubmitting(true);
+    try {
+      await api.post('/creator/settlement-requests', { amount });
+      toast.success('تم تقديم طلب التسوية');
+      setShowSettlementModal(false);
+      setSettlementAmount('');
+      fetchSettlements();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'حدث خطأ');
+    } finally {
+      setSettlementSubmitting(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
@@ -52,13 +84,6 @@ export default function CreatorEarnings() {
           <h1 className="page-title">الأرباح</h1>
           <p className="page-subtitle">إدارة أرباحك وسحوباتك</p>
         </div>
-        <button
-          onClick={() => setShowWithdrawModal(true)}
-          disabled={!data?.balance || data.balance <= 0}
-          className="btn-primary disabled:opacity-50"
-        >
-          سحب الأرباح
-        </button>
       </div>
 
       {loading ? (
@@ -79,6 +104,46 @@ export default function CreatorEarnings() {
           value={`$${Number((data?.balance || 0) + (data?.pending || 0)).toFixed(2)}`}
         />
       </div>
+
+      <div className="flex gap-3 items-start flex-wrap">
+        <button
+          onClick={() => setShowWithdrawModal(true)}
+          disabled={!data?.balance || data.balance <= 0}
+          className="btn-primary disabled:opacity-50 inline-flex items-center gap-1.5"
+        >
+          <Wallet className="w-4 h-4" /> سحب الأرباح
+        </button>
+        <button
+          onClick={() => { setSettlementAmount(''); setShowSettlementModal(true); fetchSettlements(); }}
+          disabled={!data?.pending || data.pending <= 0}
+          className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-4 py-2 rounded-lg text-xs font-bold border border-gray-200 hover:border-gray-400 hover:text-black transition-all disabled:opacity-50"
+        >
+          <Send className="w-4 h-4" /> طلب تسوية
+        </button>
+      </div>
+
+      {settlements.length > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-bold text-black mb-4">طلبات التسوية</h2>
+          <div className="space-y-2">
+            {settlements.map((sr: any) => (
+              <div key={sr.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+                <div>
+                  <p className="text-sm text-black font-medium">${Number(sr.amount).toFixed(2)}</p>
+                  <p className="text-xs text-gray-400">{new Date(sr.created_at).toLocaleDateString('ar-IQ')}</p>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  sr.status === 'approved' ? 'bg-green-50 text-green-700' :
+                  sr.status === 'rejected' ? 'bg-red-50 text-red-600' :
+                  'bg-amber-50 text-amber-700'
+                }`}>
+                  {sr.status === 'approved' ? 'تمت الموافقة' : sr.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h2 className="text-lg font-bold text-black mb-4">سجل المعاملات</h2>
@@ -124,6 +189,48 @@ export default function CreatorEarnings() {
         )}
       </div>
       </>)}
+      {showSettlementModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">طلب تسوية</h3>
+              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+              المبلغ المعلق: <span className="font-bold text-black">${Number(data?.pending || 0).toFixed(2)}</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              سيتم تسليم المبلغ المعلق إلى محفظتك بعد موافقة المشرف.
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">المبلغ</label>
+              <input
+                type="number"
+                value={settlementAmount}
+                onChange={(e) => setSettlementAmount(e.target.value)}
+                className="input-field"
+                placeholder="أدخل المبلغ"
+                min={0}
+                max={data?.pending || 0}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSettlementRequest}
+                disabled={settlementSubmitting || !settlementAmount || parseFloat(settlementAmount) <= 0}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                {settlementSubmitting ? 'جاري الإرسال...' : 'تقديم الطلب'}
+              </button>
+              <button onClick={() => setShowSettlementModal(false)} className="btn-secondary flex-1">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 space-y-4">

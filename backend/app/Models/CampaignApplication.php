@@ -12,12 +12,18 @@ class CampaignApplication extends Model
         'proposal',
         'proposed_rate',
         'status',
+        'shipping_status',
+        'tracking_number',
+        'shipped_at',
+        'received_at',
     ];
 
     protected function casts(): array
     {
         return [
             'proposed_rate' => 'decimal:2',
+            'shipped_at' => 'datetime',
+            'received_at' => 'datetime',
         ];
     }
 

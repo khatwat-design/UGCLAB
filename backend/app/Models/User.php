@@ -89,6 +89,11 @@ class User extends Authenticatable
         return $this->hasMany(PortfolioItem::class);
     }
 
+    public function settlementRequests()
+    {
+        return $this->hasMany(SettlementRequest::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

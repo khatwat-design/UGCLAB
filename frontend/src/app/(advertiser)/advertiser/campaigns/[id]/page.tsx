@@ -8,7 +8,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import {
   ArrowRight, Edit, Trash2, Users, DollarSign, Calendar, Clock,
   CheckCircle, XCircle, ExternalLink, MoreVertical, ChevronDown, X, FileText, User, Eye,
-  Check, ThumbsUp, AlertCircle, Save,
+  Check, ThumbsUp, AlertCircle, Save, Package, Truck, RefreshCw,
 } from 'lucide-react';
 import { CampaignDetailSkeleton } from '@/components/shared/Skeleton';
 
@@ -24,7 +24,15 @@ const appStatusConfig: Record<string, { label: string; classes: string }> = {
   pending: { label: 'بانتظار المراجعة', classes: 'bg-gray-100 text-gray-600' },
   accepted: { label: 'مقبول', classes: 'bg-black text-white' },
   rejected: { label: 'مرفوض', classes: 'bg-gray-100 text-gray-400' },
+  in_revision: { label: 'مراجعة', classes: 'bg-amber-50 text-amber-700' },
   completed: { label: 'مكتمل', classes: 'bg-gray-100 text-gray-500' },
+};
+
+const shippingConfig: Record<string, { label: string; classes: string }> = {
+  not_shipped: { label: 'لم يتم الشحن', classes: 'bg-gray-100 text-gray-400' },
+  awaiting_shipment: { label: ',بإنتظار الشحن', classes: 'bg-amber-50 text-amber-700' },
+  shipped: { label: 'تم الشحن', classes: 'bg-blue-50 text-blue-700' },
+  received: { label: 'تم الاستلام', classes: 'bg-green-50 text-green-700' },
 };
 
 const statusWorkflow = [
@@ -42,6 +50,10 @@ export default function CampaignDetail() {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [deliverableFeedback, setDeliverableFeedback] = useState<Record<string, string>>({});
+  const [showShipInput, setShowShipInput] = useState<Record<number, boolean>>({});
+  const [shippingTracking, setShippingTracking] = useState<Record<number, string>>({});
+  const [showRevisionInput, setShowRevisionInput] = useState<Record<number, boolean>>({});
+  const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '', description: '', brief: '', budget: '',
@@ -100,6 +112,30 @@ export default function CampaignDetail() {
     try {
       await api.post(`/advertiser/deliverables/${delId}/reject`, { feedback });
       toast.success('تم رفض التسليم');
+      refresh();
+    } catch { toast.error('حدث خطأ'); }
+  };
+
+  const markShipped = async (appId: number) => {
+    const tracking = shippingTracking[appId] || '';
+    try {
+      await api.post(`/advertiser/campaigns/${id}/applications/${appId}/ship`, { tracking_number: tracking || null });
+      toast.success('تم تعليم الشحن');
+      setShowShipInput((prev) => ({ ...prev, [appId]: false }));
+      refresh();
+    } catch { toast.error('حدث خطأ'); }
+  };
+
+  const requestRevision = async (appId: number, delId: number) => {
+    const notes = revisionNotes[`${appId}-${delId}`];
+    if (!notes?.trim()) {
+      toast.error('الرجاء كتابة ملاحظات التعديل');
+      return;
+    }
+    try {
+      await api.post(`/advertiser/deliverables/${delId}/request-revision`, { revision_notes: notes });
+      toast.success('تم طلب التعديل');
+      setShowRevisionInput((prev) => ({ ...prev, [delId]: false }));
       refresh();
     } catch { toast.error('حدث خطأ'); }
   };
@@ -397,6 +433,53 @@ export default function CampaignDetail() {
                           </button>
                         </div>
                       )}
+
+                      {app.status === 'accepted' && (
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {app.shipping_status === 'not_shipped' && (
+                            <>
+                              {showShipInput[app.id] ? (
+                                <div className="space-y-1.5">
+                                  <input
+                                    type="text"
+                                    placeholder="رقم التتبع (اختياري)"
+                                    value={shippingTracking[app.id] || ''}
+                                    onChange={(e) => setShippingTracking((prev) => ({ ...prev, [app.id]: e.target.value }))}
+                                    className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400"
+                                  />
+                                  <button
+                                    onClick={() => markShipped(app.id)}
+                                    className="w-full inline-flex items-center justify-center gap-1.5 bg-black text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-800 transition-all"
+                                  >
+                                    <Truck className="w-3.5 h-3.5" />
+                                    تأكيد الشحن
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowShipInput((prev) => ({ ...prev, [app.id]: true }))}
+                                  className="inline-flex items-center gap-1.5 bg-black text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-800 transition-all"
+                                >
+                                  <Package className="w-3.5 h-3.5" />
+                                  شحن المنتج
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {app.shipping_status === 'shipped' && (
+                            <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-3 py-2 rounded-lg">
+                              <Truck className="w-3.5 h-3.5" />
+                              {app.tracking_number ? `تتبع: ${app.tracking_number}` : 'تم الشحن'}
+                            </span>
+                          )}
+                          {app.shipping_status === 'received' && (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                              <Check className="w-3.5 h-3.5" />
+                              تم الاستلام
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -499,7 +582,7 @@ export default function CampaignDetail() {
                               مرفوض
                             </span>
                           )}
-                          {isPending && (
+                          {(isPending || del.status === 'revision_requested') && (
                             <div className="space-y-2">
                               <button
                                 onClick={() => approveDeliverable(appId, del.id)}
@@ -508,6 +591,36 @@ export default function CampaignDetail() {
                                 <Check className="w-3.5 h-3.5" />
                                 اعتماد
                               </button>
+
+                              {showRevisionInput[del.id] ? (
+                                <div className="space-y-1.5">
+                                  <textarea
+                                    placeholder="ملاحظات التعديل..."
+                                    value={revisionNotes[`${appId}-${del.id}`] || ''}
+                                    onChange={(e) => setRevisionNotes((prev) => ({
+                                      ...prev,
+                                      [`${appId}-${del.id}`]: e.target.value,
+                                    }))}
+                                    className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 min-h-[60px]"
+                                  />
+                                  <button
+                                    onClick={() => requestRevision(appId, del.id)}
+                                    className="w-full inline-flex items-center justify-center gap-1.5 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg text-xs font-bold border border-amber-200 hover:bg-amber-100 transition-all"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    تأكيد طلب التعديل
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowRevisionInput((prev) => ({ ...prev, [del.id]: true }))}
+                                  className="w-full inline-flex items-center justify-center gap-1.5 bg-white text-amber-700 px-4 py-2 rounded-lg text-xs font-bold border border-amber-200 hover:bg-amber-50 transition-all"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                  طلب تعديل
+                                </button>
+                              )}
+
                               <div className="space-y-1.5">
                                 <input
                                   type="text"

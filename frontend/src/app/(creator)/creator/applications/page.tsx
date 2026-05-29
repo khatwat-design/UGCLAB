@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import Badge from '@/components/shared/Badge';
 import { formatDate } from '@/lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
-import { ChevronLeft, ChevronRight, Upload, Film, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Film, FileText, Package, Truck, Check } from 'lucide-react';
 import { AppListSkeleton } from '@/components/shared/Skeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -81,6 +81,14 @@ export default function CreatorApplications() {
     }
   };
 
+  const markReceived = async (appId: number) => {
+    try {
+      await api.post(`/creator/applications/${appId}/mark-received`);
+      toast.success('تم تأكيد استلام المنتج');
+      fetchApplications(page);
+    } catch { toast.error('حدث خطأ'); }
+  };
+
   const openDeliverableModal = (app: any) => {
     setSelectedApp(app);
     setContentUrl('');
@@ -117,34 +125,70 @@ export default function CreatorApplications() {
                       <span>المبلغ المقترح: ${app.proposed_rate}</span>
                       <span>{formatDate(app.created_at)}</span>
                     </div>
+                    {app.shipping_status && app.shipping_status !== 'not_shipped' && (
+                      <div className="flex items-center gap-2 text-xs mt-1">
+                        {app.shipping_status === 'shipped' && (
+                          <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                            <Truck className="w-3 h-3" />
+                            {app.tracking_number ? `تم الشحن - تتبع: ${app.tracking_number}` : 'تم الشحن'}
+                          </span>
+                        )}
+                        {app.shipping_status === 'received' && (
+                          <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                            <Check className="w-3 h-3" />
+                            تم الاستلام
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0 mr-4">
                     <Badge status={app.status} />
                     {(app.status === 'accepted' || app.status === 'revision_requested') && (
-                      <button
-                        onClick={() => openDeliverableModal(app)}
-                        className="btn-primary text-sm"
-                      >
-                        تسليم المحتوى
-                      </button>
+                      <>
+                        <button
+                          onClick={() => openDeliverableModal(app)}
+                          className="btn-primary text-sm"
+                        >
+                          تسليم المحتوى
+                        </button>
+                        {app.shipping_status === 'shipped' && (
+                          <button
+                            onClick={() => markReceived(app.id)}
+                            className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-green-200 hover:bg-green-100 transition-all"
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                            تأكيد الاستلام
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
                 {app.deliverables?.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
-                    <span className="text-xs text-gray-400">
-                      تم التسليم: {formatDate(app.deliverables[0].submitted_at)}
-                    </span>
-                    <Badge status={app.deliverables[0].status} className="!text-[10px]" />
-                    {app.deliverables[0].content_url && (
-                      <a
-                        href={app.deliverables[0].content_url}
-                        target="_blank"
-                        className="text-xs text-black underline hover:no-underline"
-                      >
-                        عرض المحتوى
-                      </a>
-                    )}
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                    {app.deliverables.map((del: any) => (
+                      <div key={del.id} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">
+                          تم التسليم: {formatDate(del.submitted_at)}
+                        </span>
+                        <Badge status={del.status} className="!text-[10px]" />
+                        {del.content_url && (
+                          <a
+                            href={del.content_url}
+                            target="_blank"
+                            className="text-xs text-black underline hover:no-underline"
+                          >
+                            عرض المحتوى
+                          </a>
+                        )}
+                        {del.revision_notes && del.status === 'revision_requested' && (
+                          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="ملاحظات التعديل">
+                            {del.revision_notes}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -11,6 +11,7 @@ class Deliverable extends Model
         'content_url',
         'content_type',
         'notes',
+        'revision_notes',
         'status',
         'submitted_at',
         'reviewed_at',
