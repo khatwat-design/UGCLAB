@@ -39,6 +39,7 @@ function RegisterWizard() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+964');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +52,9 @@ function RegisterWizard() {
   const [engagementRate, setEngagementRate] = useState('');
   const [portfolioLinks, setPortfolioLinks] = useState('');
   const [bio, setBio] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
 
   // Advertiser fields
   const [companyName, setCompanyName] = useState('');
@@ -65,7 +69,7 @@ function RegisterWizard() {
 
   const canNext = () => {
     if (step === 0) return !!role;
-    if (step === 1) return !!name && !!email && !!password && password === passwordConfirmation;
+    if (step === 1) return !!name && !!email && !!phone && !!password && password === passwordConfirmation && password.length >= 8;
     if (step === 2) {
       if (role === 'creator') return true;
       return !!companyName;
@@ -77,13 +81,17 @@ function RegisterWizard() {
     setIsSubmitting(true);
     try {
       await register(name, email, password, passwordConfirmation, role, {
-        phone,
+        phone: `${countryCode}${phone}`,
         ...(role === 'creator' ? {
           category,
           platforms,
           followers_count: parseInt(followersCount) || 0,
           engagement_rate: parseFloat(engagementRate) || 0,
           bio,
+          address,
+          city,
+          state,
+          country: 'IQ',
           portfolio_links: portfolioLinks ? portfolioLinks.split('\n').map(s => s.trim()).filter(Boolean) : [],
         } : {
           company_name: companyName,
@@ -259,8 +267,37 @@ function RegisterWizard() {
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field" placeholder="your@email.com" dir="ltr" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">رقم الهاتف (اختياري)</label>
-                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input-field" placeholder="+964 xxx xxx xxxx" dir="ltr" />
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      رقم الهاتف <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="input-field w-[120px] shrink-0 text-center"
+                        dir="ltr"
+                      >
+                        <option value="+964">🇮🇶 +964</option>
+                        <option value="+966">🇸🇦 +966</option>
+                        <option value="+971">🇦🇪 +971</option>
+                        <option value="+965">🇰🇼 +965</option>
+                        <option value="+973">🇧🇭 +973</option>
+                        <option value="+974">🇶🇦 +974</option>
+                        <option value="+968">🇴🇲 +968</option>
+                        <option value="+20">🇪🇬 +20</option>
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+44">🇬🇧 +44</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        className="input-field flex-1"
+                        placeholder="xxx xxx xxxx"
+                        required
+                        dir="ltr"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">كلمة المرور</label>
@@ -334,6 +371,25 @@ function RegisterWizard() {
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">روابط الأعمال (رابط في كل سطر)</label>
                         <textarea value={portfolioLinks} onChange={(e) => setPortfolioLinks(e.target.value)} className="input-field min-h-[80px]" placeholder="https://instagram.com/p/...&#10;https://youtube.com/..." dir="ltr" />
+                      </div>
+
+                      <div className="border-t border-gray-100 pt-4 mt-2">
+                        <h3 className="text-sm font-bold text-black mb-3">العنوان (لشحن المنتجات)</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">العنوان</label>
+                            <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="input-field min-h-[60px]" placeholder="العنوان الكامل..." />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
+                            <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="input-field" placeholder="بغداد" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
+                            <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="input-field" placeholder="بغداد" />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">هذا العنوان سيتم إرساله للمعلن عند الموافقة على طلبك لشحن المنتجات</p>
                       </div>
                     </>
                   ) : (

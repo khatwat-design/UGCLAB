@@ -20,6 +20,10 @@ export default function CreatorSettings() {
   const [followersCount, setFollowersCount] = useState(0);
   const [engagementRate, setEngagementRate] = useState(0);
 
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [stateField, setStateField] = useState('');
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('');
@@ -42,6 +46,9 @@ export default function CreatorSettings() {
       setPlatforms(u.creator_profile?.platforms || []);
       setFollowersCount(u.creator_profile?.followers_count || 0);
       setEngagementRate(u.creator_profile?.engagement_rate || 0);
+      setAddress(u.creator_profile?.address || '');
+      setCity(u.creator_profile?.city || '');
+      setStateField(u.creator_profile?.state || '');
       if (u.notification_preferences) {
         setNotifications({ ...notifications, ...u.notification_preferences });
       }
@@ -52,7 +59,7 @@ export default function CreatorSettings() {
     setSaving(true);
     try {
       await api.put('/auth/profile', { name, email });
-      await api.put('/creator/profile', { category, platforms, followers_count: followersCount, engagement_rate: engagementRate });
+      await api.put('/creator/profile', { category, platforms, followers_count: followersCount, engagement_rate: engagementRate, address, city, state: stateField, country: 'IQ' });
       toast.success('تم حفظ التغييرات');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'حدث خطأ');
@@ -177,6 +184,25 @@ export default function CreatorSettings() {
               <label className="block text-xs font-medium text-gray-700 mb-1">نبذة عنك</label>
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="input-field min-h-[100px]" placeholder="اكتب نبذة تعريفية عنك" />
             </div>
+
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <h3 className="text-sm font-bold text-black mb-3">العنوان (لشحن المنتجات)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">العنوان</label>
+                  <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="input-field min-h-[60px]" placeholder="العنوان الكامل..." />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
+                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="input-field" placeholder="بغداد" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
+                  <input type="text" value={stateField} onChange={(e) => setStateField(e.target.value)} className="input-field" placeholder="بغداد" />
+                </div>
+              </div>
+            </div>
+
             <button onClick={handleSaveProfile} disabled={saving} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
               <Save className="w-4 h-4" /> حفظ التغييرات
             </button>

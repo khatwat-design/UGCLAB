@@ -19,7 +19,7 @@ class AuthController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', 'string', 'in:creator,advertiser'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20'],
             'bio' => ['nullable', 'string', 'max:1000'],
             'category' => ['nullable', 'string', 'max:255'],
             'platforms' => ['nullable', 'array'],
@@ -30,6 +30,11 @@ class AuthController extends Controller
             'company_name' => ['nullable', 'string', 'max:255'],
             'industry' => ['nullable', 'string', 'max:255'],
             'company_website' => ['nullable', 'url'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'zip_code' => ['nullable', 'string', 'max:20'],
+            'country' => ['nullable', 'string', 'max:2'],
         ]);
 
         $user = User::create([
@@ -50,6 +55,11 @@ class AuthController extends Controller
                 'followers_count' => $validated['followers_count'] ?? 0,
                 'engagement_rate' => $validated['engagement_rate'] ?? 0,
                 'portfolio_links' => $validated['portfolio_links'] ?? [],
+                'address' => $validated['address'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'state' => $validated['state'] ?? null,
+                'zip_code' => $validated['zip_code'] ?? null,
+                'country' => $validated['country'] ?? 'IQ',
             ]);
         } else {
             $user->advertiserProfile()->create([

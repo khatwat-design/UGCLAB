@@ -15,6 +15,11 @@ class CreatorProfile extends Model
         'followers_count',
         'engagement_rate',
         'is_verified',
+        'address',
+        'city',
+        'state',
+        'zip_code',
+        'country',
     ];
 
     protected function casts(): array

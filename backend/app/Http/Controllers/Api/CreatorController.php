@@ -174,6 +174,11 @@ class CreatorController extends Controller
             'portfolio_links.*' => ['url'],
             'followers_count' => ['sometimes', 'integer', 'min:0'],
             'engagement_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'address' => ['sometimes', 'string', 'max:500'],
+            'city' => ['sometimes', 'string', 'max:100'],
+            'state' => ['sometimes', 'string', 'max:100'],
+            'zip_code' => ['sometimes', 'string', 'max:20'],
+            'country' => ['sometimes', 'string', 'max:2'],
         ]);
 
         $profile->update($validated);
