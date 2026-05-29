@@ -176,7 +176,9 @@ function RegisterWizard() {
       <Toaster position="top-center" />
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-black">UGCLab</Link>
+          <Link href="/" className="inline-block">
+            <img src="/logo.svg" alt="UGCLab" className="h-10 sm:h-12 w-auto mx-auto" />
+          </Link>
           <p className="mt-2 text-sm text-gray-500">إنشاء حساب جديد</p>
         </div>
 
@@ -460,7 +462,7 @@ function RegisterWizard() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-gray-400">جاري التحميل...</div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><img src="/logo-icon.svg" alt="loading" className="h-10 w-auto opacity-40 animate-spin-slow" /></div>}>
       <RegisterWizard />
     </Suspense>
   );

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\KycController;
 use App\Http\Controllers\Api\PortfolioController;
+use App\Http\Controllers\Api\MediaController;
 
 // Public routes (with rate limiting)
 Route::post('/auth/login', [AuthController::class, 'login'])
@@ -57,6 +58,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/deliverables/{deliverable}/reject', [AdvertiserController::class, 'rejectDeliverable']);
         Route::post('/invite/{creator}', [AdvertiserController::class, 'invite']);
         Route::get('/creators', [CreatorController::class, 'discoverCreators']);
+    });
+
+    // Media uploads
+    Route::prefix('media')->group(function () {
+        Route::post('/upload', [MediaController::class, 'upload']);
+        Route::delete('/{medium}', [MediaController::class, 'delete']);
     });
 
     // Portfolio

@@ -451,14 +451,38 @@ export default function CampaignDetail() {
                             </div>
                           </div>
                           <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            <a
-                              href={del.content_url}
-                              target="_blank"
-                              className="inline-flex items-center gap-1.5 text-sm text-black font-medium underline underline-offset-2 hover:text-gray-600 transition-colors"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              عرض المحتوى
-                            </a>
+                            {del.content_url ? (
+                              del.content_url.match(/\.(mp4|mov|avi|webm)(\?|$)/i) || del.content_type === 'video' ? (
+                                <video
+                                  src={del.content_url}
+                                  controls
+                                  className="w-full max-h-48 rounded-lg"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : del.content_url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i) || del.content_type === 'image' ? (
+                                <img
+                                  src={del.content_url}
+                                  alt=""
+                                  className="w-full max-h-48 object-contain rounded-lg"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <a
+                                  href={del.content_url}
+                                  target="_blank"
+                                  className="inline-flex items-center gap-1.5 text-sm text-black font-medium underline underline-offset-2 hover:text-gray-600 transition-colors"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  عرض المحتوى
+                                </a>
+                              )
+                            ) : (
+                              <p className="text-xs text-gray-400">لا يوجد محتوى</p>
+                            )}
                             {del.notes && <p className="text-xs text-gray-500 mt-2">{del.notes}</p>}
                           </div>
                         </div>

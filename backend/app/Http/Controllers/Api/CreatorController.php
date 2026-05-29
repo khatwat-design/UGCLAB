@@ -96,28 +96,58 @@ class CreatorController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($application->status !== 'accepted') {
+        if ($application->status !== 'accepted' && $application->status !== 'revision_requested') {
             return response()->json(['message' => 'Application must be accepted first'], 422);
         }
 
         $validated = $request->validate([
-            'content_url' => ['required', 'string', 'max:2048'],
+            'content_url' => ['nullable', 'string', 'max:2048'],
             'content_type' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'media_id' => ['nullable', 'exists:media,id'],
         ]);
+
+        $contentUrl = $validated['content_url'] ?? null;
+        if ($validated['media_id'] ?? null) {
+            $media = \App\Models\Media::find($validated['media_id']);
+            $contentUrl = $media->url;
+            $media->update([
+                'model_type' => \App\Models\Deliverable::class,
+            ]);
+        }
 
         $deliverable = Deliverable::create([
             'application_id' => $application->id,
-            'content_url' => $validated['content_url'],
+            'content_url' => $contentUrl,
             'content_type' => $validated['content_type'],
             'notes' => $validated['notes'],
             'status' => 'submitted',
             'submitted_at' => now(),
         ]);
 
-        $application->update(['status' => 'completed']);
+        if ($validated['media_id'] ?? null) {
+            \App\Models\Media::where('id', $validated['media_id'])->update(['model_id' => $deliverable->id]);
+        }
 
-        return response()->json($deliverable, 201);
+        $application->update(['status' => $application->status === 'revision_requested' ? 'in_revision' : 'completed']);
+
+        // Notify advertiser
+        try {
+            $campaign = $application->campaign;
+            $advertiser = $campaign->advertiser;
+            $creator = auth()->user();
+            \App\Services\NotificationService::send(
+                $advertiser,
+                'new_deliverable',
+                [
+                    'message' => "قام {$creator->name} بتسليم المحتوى للحملة: {$campaign->title}",
+                    'campaign_id' => $campaign->id,
+                    'application_id' => $application->id,
+                ]
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json($deliverable->load('application.campaign'), 201);
     }
 
     public function earnings()

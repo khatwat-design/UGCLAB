@@ -13,6 +13,7 @@ class PortfolioItem extends Model
         'image_url',
         'link_url',
         'sort_order',
+        'is_video',
     ];
 
     protected function casts(): array

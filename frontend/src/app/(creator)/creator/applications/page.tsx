@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import Badge from '@/components/shared/Badge';
 import { formatDate } from '@/lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Film, FileText } from 'lucide-react';
 import { AppListSkeleton } from '@/components/shared/Skeleton';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function CreatorApplications() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -19,6 +20,9 @@ export default function CreatorApplications() {
   const [contentType, setContentType] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mediaId, setMediaId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchApplications = (p: number) => {
     setLoading(true);
@@ -30,26 +34,60 @@ export default function CreatorApplications() {
 
   useEffect(() => { fetchApplications(page); }, [page]);
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('collection', 'deliverable');
+      const res = await api.post('/media/upload', formData);
+      const media = res.data;
+      setMediaId(media.id);
+      setContentUrl(media.url);
+      setContentType(media.is_video ? 'video' : file.type.startsWith('image/') ? 'image' : 'file');
+      toast.success('تم رفع الملف');
+    } catch {
+      toast.error('فشل رفع الملف');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const submitDeliverable = async (appId: number) => {
-    if (!contentUrl.trim() || !contentType.trim()) return;
+    if ((!contentUrl.trim() || !contentType.trim()) && !mediaId) return;
     setSubmitting(true);
     try {
-      await api.post(`/creator/deliverables/${appId}`, {
-        content_url: contentUrl,
-        content_type: contentType,
-        notes,
-      });
+      const payload: any = { content_type: contentType, notes };
+      if (mediaId) {
+        payload.media_id = mediaId;
+      } else {
+        payload.content_url = contentUrl;
+      }
+      await api.post(`/creator/deliverables/${appId}`, payload);
       toast.success('تم تسليم المحتوى بنجاح');
       setShowModal(false);
       setContentUrl('');
       setContentType('');
       setNotes('');
+      setMediaId(null);
       fetchApplications(page);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'حدث خطأ');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openDeliverableModal = (app: any) => {
+    setSelectedApp(app);
+    setContentUrl('');
+    setContentType('');
+    setNotes('');
+    setMediaId(null);
+    setShowModal(true);
   };
 
   return (
@@ -82,9 +120,9 @@ export default function CreatorApplications() {
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0 mr-4">
                     <Badge status={app.status} />
-                    {app.status === 'accepted' && (
+                    {(app.status === 'accepted' || app.status === 'revision_requested') && (
                       <button
-                        onClick={() => { setSelectedApp(app); setShowModal(true); }}
+                        onClick={() => openDeliverableModal(app)}
                         className="btn-primary text-sm"
                       >
                         تسليم المحتوى
@@ -98,6 +136,15 @@ export default function CreatorApplications() {
                       تم التسليم: {formatDate(app.deliverables[0].submitted_at)}
                     </span>
                     <Badge status={app.deliverables[0].status} className="!text-[10px]" />
+                    {app.deliverables[0].content_url && (
+                      <a
+                        href={app.deliverables[0].content_url}
+                        target="_blank"
+                        className="text-xs text-black underline hover:no-underline"
+                      >
+                        عرض المحتوى
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
@@ -133,13 +180,49 @@ export default function CreatorApplications() {
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 space-y-4">
             <h3 className="text-lg font-bold">تسليم المحتوى</h3>
             <p className="text-sm text-gray-500">{selectedApp?.campaign?.title}</p>
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <LoadingSpinner className="h-8 w-auto" />
+                  <span className="text-xs text-gray-400">جاري الرفع...</span>
+                </div>
+              ) : contentUrl ? (
+                <div className="relative">
+                  {contentType === 'video' ? (
+                    <video src={contentUrl} className="max-h-32 mx-auto rounded-lg" controls />
+                  ) : (
+                    <div className="flex items-center gap-2 justify-center">
+                      <FileText className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-gray-600">تم رفع الملف</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setContentUrl(''); setMediaId(null); }}
+                    className="mt-2 text-xs text-red-500 hover:text-red-700"
+                  >
+                    حذف وإعادة رفع
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-300" />
+                  <span className="text-sm text-gray-400">اضغط لرفع ملف المحتوى</span>
+                  <span className="text-[10px] text-gray-300">فيديو، صورة، PDF - حد 100MB</span>
+                </div>
+              )}
+            </div>
             <input
-              type="text"
-              value={contentUrl}
-              onChange={(e) => setContentUrl(e.target.value)}
-              className="input-field"
-              placeholder="رابط المحتوى"
+              ref={fileInputRef}
+              type="file"
+              accept="video/*,image/*,.pdf,.doc,.docx"
+              className="hidden"
+              onChange={handleFileSelect}
             />
+
             <input
               type="text"
               value={contentType}
@@ -156,7 +239,7 @@ export default function CreatorApplications() {
             <div className="flex gap-3">
               <button
                 onClick={() => submitDeliverable(selectedApp.id)}
-                disabled={submitting || !contentUrl.trim() || !contentType.trim()}
+                disabled={submitting || uploading || (!contentUrl.trim() && !mediaId) || !contentType.trim()}
                 className="btn-primary flex-1 disabled:opacity-50"
               >
                 {submitting ? 'جاري التسليم...' : 'تأكيد التسليم'}

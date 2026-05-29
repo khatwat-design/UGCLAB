@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
-  Plus, X, ExternalLink, Image, GripVertical, Pencil, Trash2,
+  Plus, X, ExternalLink, Image, Pencil, Trash2, Upload, Video, Film,
 } from 'lucide-react';
-import Link from 'next/link';
-import { PortfolioSkeleton } from '@/components/shared/Skeleton';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface PortfolioItem {
   id: number;
@@ -16,6 +15,7 @@ interface PortfolioItem {
   description: string;
   image_url: string;
   link_url: string;
+  is_video: boolean;
   sort_order: number;
 }
 
@@ -29,6 +29,10 @@ export default function CreatorPortfolio() {
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedMediaId, setUploadedMediaId] = useState<number | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = () => {
     api.get('/portfolio').then((r) => setItems(r.data)).catch(() => {}).finally(() => setLoading(false));
@@ -42,6 +46,8 @@ export default function CreatorPortfolio() {
     setDescription('');
     setImageUrl('');
     setLinkUrl('');
+    setUploadedMediaId(null);
+    setIsVideo(false);
     setShowModal(true);
   };
 
@@ -51,13 +57,43 @@ export default function CreatorPortfolio() {
     setDescription(item.description || '');
     setImageUrl(item.image_url || '');
     setLinkUrl(item.link_url || '');
+    setUploadedMediaId(null);
+    setIsVideo(item.is_video || false);
     setShowModal(true);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('collection', 'portfolio');
+      const res = await api.post('/media/upload', formData);
+      const media = res.data;
+      setUploadedMediaId(media.id);
+      setImageUrl(media.url);
+      setIsVideo(media.is_video);
+      toast.success('تم رفع الملف');
+    } catch {
+      toast.error('فشل رفع الملف');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = { title, description, image_url: imageUrl, link_url: linkUrl };
+      const payload: any = { title, description, link_url: linkUrl };
+      if (uploadedMediaId) {
+        payload.media_id = uploadedMediaId;
+      } else if (imageUrl && !uploadedMediaId) {
+        payload.image_url = imageUrl;
+      }
+      payload.is_video = isVideo;
       if (editing) {
         await api.put(`/portfolio/${editing.id}`, payload);
         toast.success('تم تحديث العمل');
@@ -89,7 +125,7 @@ export default function CreatorPortfolio() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="page-title">معرض الأعمال</h1>
-          <p className="page-subtitle">أضف وأدر أعمالك السابقة</p>
+          <p className="page-subtitle">أضف وأدر أعمالك السابقة (صور وفيديوهات)</p>
         </div>
         <button onClick={openCreate} className="btn-primary inline-flex items-center gap-2">
           <Plus className="w-4 h-4" /> إضافة عمل
@@ -97,7 +133,7 @@ export default function CreatorPortfolio() {
       </div>
 
       {loading ? (
-        <PortfolioSkeleton count={3} />
+        <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : items.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
           <Image className="w-12 h-12 text-gray-200 mx-auto mb-3" />
@@ -119,16 +155,29 @@ export default function CreatorPortfolio() {
             >
               <div className="relative">
                 {item.image_url ? (
-                  <div className="h-40 rounded-lg bg-gray-100 overflow-hidden mb-3">
-                    <img
-                      src={item.image_url}
-                      alt={item.title || ''}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+                  <div className="h-44 rounded-lg bg-gray-900 overflow-hidden mb-3">
+                    {item.is_video ? (
+                      <video
+                        src={item.image_url}
+                        className="w-full h-full object-cover"
+                        controls
+                      />
+                    ) : (
+                      <img
+                        src={item.image_url}
+                        alt={item.title || ''}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    {item.is_video && (
+                      <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <Film className="w-3 h-3" /> فيديو
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="h-40 rounded-lg bg-gray-50 flex items-center justify-center mb-3">
+                  <div className="h-44 rounded-lg bg-gray-50 flex items-center justify-center mb-3">
                     <Image className="w-8 h-8 text-gray-300" />
                   </div>
                 )}
@@ -178,16 +227,56 @@ export default function CreatorPortfolio() {
               <label className="block text-xs font-medium text-gray-700 mb-1">العنوان</label>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="input-field" placeholder="عنوان العمل" />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">رابط الصورة</label>
-              <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input-field" placeholder="https://example.com/image.jpg" dir="ltr" />
-              {imageUrl && (
-                <div className="mt-2 h-32 rounded-lg bg-gray-50 overflow-hidden border border-gray-200">
-                  <img src={imageUrl} alt="" className="w-full h-full object-contain"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                </div>
-              )}
+              <label className="block text-xs font-medium text-gray-700 mb-1">رفع ملف (صورة أو فيديو)</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <LoadingSpinner className="h-8 w-auto" />
+                    <span className="text-xs text-gray-400">جاري الرفع...</span>
+                  </div>
+                ) : imageUrl ? (
+                  <div className="relative">
+                    {isVideo ? (
+                      <video src={imageUrl} className="max-h-32 mx-auto rounded-lg" controls />
+                    ) : (
+                      <img src={imageUrl} alt="" className="max-h-32 mx-auto rounded-lg" />
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setImageUrl(''); setUploadedMediaId(null); }}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-8 h-8 text-gray-300" />
+                    <span className="text-sm text-gray-400">اضغط لرفع صورة أو فيديو</span>
+                    <span className="text-[10px] text-gray-300">JPG, PNG, WEBP, MP4, MOV - حد 100MB</span>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
             </div>
+
+            {imageUrl && !uploadedMediaId && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">أو رابط الصورة/الفيديو</label>
+                <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input-field" placeholder="https://example.com/media" dir="ltr" />
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">الوصف</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="input-field min-h-[80px]" placeholder="وصف العمل..." />
@@ -197,7 +286,7 @@ export default function CreatorPortfolio() {
               <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="input-field" placeholder="https://..." dir="ltr" />
             </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 disabled:opacity-50">
+              <button onClick={handleSave} disabled={saving || uploading} className="btn-primary flex-1 disabled:opacity-50">
                 {saving ? 'جاري الحفظ...' : editing ? 'تحديث' : 'إضافة'}
               </button>
               <button onClick={() => setShowModal(false)} className="btn-secondary flex-1">إلغاء</button>

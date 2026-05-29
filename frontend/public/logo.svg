@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <rect x="8" y="8" width="44" height="44" rx="12" fill="currentColor"/>
+  <path d="M30 18c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 20c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z" fill="white"/>
+  <path d="M26 26h8v2H26zM26 30h8v2H26z" fill="currentColor"/>
+  <path d="M28 24h4v2h-4zM28 32h4v2h-4z" fill="currentColor"/>
+  <text x="62" y="40" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="currentColor" letter-spacing="-0.5">UGCLab</text>
+  <text x="62" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="currentColor" opacity="0.5" letter-spacing="1.5">CREATIVE MARKETPLACE</text>
+</svg>
