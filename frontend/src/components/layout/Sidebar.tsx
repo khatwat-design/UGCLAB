@@ -50,6 +50,7 @@ const adminLinks: SidebarLink[] = [
   { href: '/admin/users', label: 'المستخدمين', icon: <Users className="w-5 h-5" /> },
   { href: '/admin/campaigns', label: 'الحملات', icon: <Megaphone className="w-5 h-5" /> },
   { href: '/admin/payments', label: 'المدفوعات', icon: <DollarSign className="w-5 h-5" /> },
+  { href: '/admin/logs', label: 'سجل النشاطات', icon: <FileText className="w-5 h-5" /> },
 ];
 
 export default function Sidebar({ role }: { role: string }) {

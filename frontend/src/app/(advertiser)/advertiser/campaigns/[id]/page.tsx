@@ -8,7 +8,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import {
   ArrowRight, Edit, Trash2, Users, DollarSign, Calendar, Clock,
   CheckCircle, XCircle, ExternalLink, MoreVertical, ChevronDown, X, FileText, User, Eye,
-  Check, ThumbsUp, AlertCircle, Save, Package, Truck, RefreshCw,
+  Check, ThumbsUp, AlertCircle, Save, Package, Truck, RefreshCw, Star,
 } from 'lucide-react';
 import { CampaignDetailSkeleton } from '@/components/shared/Skeleton';
 
@@ -54,6 +54,11 @@ export default function CampaignDetail() {
   const [shippingTracking, setShippingTracking] = useState<Record<number, string>>({});
   const [showRevisionInput, setShowRevisionInput] = useState<Record<number, boolean>>({});
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '', description: '', brief: '', budget: '',
@@ -138,6 +143,25 @@ export default function CampaignDetail() {
       setShowRevisionInput((prev) => ({ ...prev, [delId]: false }));
       refresh();
     } catch { toast.error('حدث خطأ'); }
+  };
+
+  const submitReview = async () => {
+    if (reviewRating < 1) { toast.error('الرجاء اختيار تقييم'); return; }
+    setSubmittingReview(true);
+    try {
+      await api.post('/reviews', {
+        campaign_id: campaign.id,
+        reviewee_id: reviewTarget?.creator?.id,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+      toast.success('تم إرسال التقييم');
+      setShowReviewModal(false);
+      setReviewRating(0);
+      setReviewComment('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'حدث خطأ');
+    } finally { setSubmittingReview(false); }
   };
 
   const changeStatus = async (newStatus: string) => {
@@ -571,10 +595,19 @@ export default function CampaignDetail() {
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                           {isApproved && (
-                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                              <ThumbsUp className="w-3.5 h-3.5" />
-                              تم الاعتماد
-                            </span>
+                            <div className="space-y-2">
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg w-full justify-center">
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                                تم الاعتماد
+                              </span>
+                              <button
+                                onClick={() => { setReviewTarget({ creator: del.creator, deliverable_id: del.id }); setShowReviewModal(true); }}
+                                className="w-full inline-flex items-center justify-center gap-1.5 bg-white text-amber-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200 hover:bg-amber-50 transition-all"
+                              >
+                                <Star className="w-3 h-3" />
+                                تقييم
+                              </button>
+                            </div>
                           )}
                           {isRejected && (
                             <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
@@ -709,6 +742,53 @@ export default function CampaignDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowReviewModal(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-bold text-black mb-1">تقييم {reviewTarget?.creator?.name}</h3>
+            <p className="text-xs text-gray-400 mb-4">شارك تجربتك مع هذا المبدع</p>
+
+            <div className="flex items-center justify-center gap-1 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className={`p-1 transition-all ${star <= reviewRating ? 'text-amber-400 scale-110' : 'text-gray-200 hover:text-amber-200'}`}
+                >
+                  <Star className="w-7 h-7 fill-current" />
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              className="input-field min-h-[80px] text-sm mb-4"
+              placeholder="اكتب تعليقك (اختياري)..."
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={submitReview}
+                disabled={submittingReview || reviewRating < 1}
+                className="btn-primary flex-1 text-sm disabled:opacity-50"
+              >
+                {submittingReview ? 'جاري الإرسال...' : 'إرسال التقييم'}
+              </button>
+              <button onClick={() => setShowReviewModal(false)} className="btn-secondary flex-1 text-sm">
+                إلغاء
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {showEditModal && (

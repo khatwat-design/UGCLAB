@@ -83,6 +83,10 @@ export default function MessagesPage() {
     !search || conv.user.name.includes(search)
   );
 
+  if (loading) {
+    return <MessagesSkeleton />;
+  }
+
   return (
     <div className="flex h-[calc(100vh-180px)] gap-0 bg-white rounded-xl border border-gray-200 overflow-hidden">
       <Toaster position="top-center" />
@@ -102,9 +106,7 @@ export default function MessagesPage() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
-          {loading ? (
-            <div className="p-4"><MessagesSkeleton /></div>
-          ) : filteredConversations.length > 0 ? (
+          {filteredConversations.length > 0 ? (
             filteredConversations.map((conv: any) => {
               const isActive = selectedUser?.id === conv.user.id;
               return (

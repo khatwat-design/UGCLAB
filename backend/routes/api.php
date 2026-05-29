@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\KycController;
 use App\Http\Controllers\Api\PortfolioController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Models\SettlementRequest;
 
 // Public routes (with rate limiting)
@@ -23,6 +24,15 @@ Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
     ->middleware('throttle:auth');
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])
     ->middleware('throttle:auth');
+
+// Public explore endpoint — no auth required
+Route::get('/campaigns/explore', function () {
+    return \App\Models\Campaign::where('status', 'open')
+        ->select(['id', 'title', 'description', 'budget', 'category', 'created_at'])
+        ->with('advertiser:id,name')
+        ->latest()
+        ->paginate(12);
+})->middleware('throttle:api');
 
 // Authenticated routes (with general API rate limiting)
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
@@ -118,6 +128,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/deposit', [PaymentController::class, 'deposit']);
         Route::post('/withdraw', [PaymentController::class, 'withdraw']);
         Route::get('/transactions', [PaymentController::class, 'transactions']);
+    });
+
+    // Reviews
+    Route::prefix('reviews')->group(function () {
+        Route::post('/', [ReviewController::class, 'store']);
+        Route::get('/campaign/{campaign}', [ReviewController::class, 'campaign']);
+        Route::get('/user/{user}', [ReviewController::class, 'user']);
     });
 
     // KYC Documents

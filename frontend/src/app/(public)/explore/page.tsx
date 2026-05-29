@@ -10,7 +10,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/creator/campaigns')
+    api.get('/campaigns/explore')
       .then((r) => setCampaigns(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -32,7 +32,12 @@ export default function ExplorePage() {
                 <p className="text-sm text-gray-500 mb-4 line-clamp-3">{campaign.description}</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-black">${campaign.budget}</span>
-                  <span className="text-gray-400">{campaign.category || 'عام'}</span>
+                  <div className="text-left">
+                    <p className="text-gray-400">{campaign.category || 'عام'}</p>
+                    {campaign.advertiser && (
+                      <p className="text-[11px] text-gray-300">{campaign.advertiser.name}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
