@@ -1,0 +1,181 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
+import StatsCard from '@/components/shared/StatsCard';
+import { Toaster, toast } from 'react-hot-toast';
+import { ChevronLeft, ChevronRight, Wallet, X } from 'lucide-react';
+import { EarningsSkeleton } from '@/components/shared/Skeleton';
+
+export default function CreatorEarnings() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawMethod, setWithdrawMethod] = useState('zain_cash');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchEarnings = (p: number) => {
+    setLoading(true);
+    api.get(`/creator/earnings?page=${p}`).then((r) => setData(r.data)).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchEarnings(page); }, [page]);
+
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount);
+    if (!amount || amount <= 0) return;
+    if (amount > (data?.balance || 0)) {
+      toast.error('الرصيد غير كافٍ');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.post('/payments/withdraw', { amount, payment_method: withdrawMethod });
+      toast.success('تم تقديم طلب السحب بنجاح');
+      setShowWithdrawModal(false);
+      setWithdrawAmount('');
+      fetchEarnings(page);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'حدث خطأ');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Toaster position="top-center" />
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="page-title">الأرباح</h1>
+          <p className="page-subtitle">إدارة أرباحك وسحوباتك</p>
+        </div>
+        <button
+          onClick={() => setShowWithdrawModal(true)}
+          disabled={!data?.balance || data.balance <= 0}
+          className="btn-primary disabled:opacity-50"
+        >
+          سحب الأرباح
+        </button>
+      </div>
+
+      {loading ? (
+        <EarningsSkeleton />
+      ) : (<>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatsCard
+          title="الرصيد المتاح"
+          value={`$${Number(data?.balance || 0).toFixed(2)}`}
+          icon={<Wallet className="w-4 h-4 text-gray-600" />}
+        />
+        <StatsCard
+          title="المبلغ المعلق"
+          value={`$${Number(data?.pending || 0).toFixed(2)}`}
+        />
+        <StatsCard
+          title="إجمالي الأرباح"
+          value={`$${Number((data?.balance || 0) + (data?.pending || 0)).toFixed(2)}`}
+        />
+      </div>
+
+      <div className="card">
+        <h2 className="text-lg font-bold text-black mb-4">سجل المعاملات</h2>
+        {!data?.transactions?.data || data.transactions.data.length === 0 ? (
+          <p className="text-center text-gray-400 py-4">لا توجد معاملات بعد</p>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {data.transactions.data.map((tx: any) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div>
+                    <p className="text-sm text-black">{tx.description || 'معاملة'}</p>
+                    <p className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleDateString('ar-IQ')}</p>
+                  </div>
+                  <span className={`font-medium text-sm ${Number(tx.amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {Number(tx.amount) >= 0 ? '+' : ''}${Math.abs(Number(tx.amount)).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {data.transactions.meta?.last_page > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-4 mt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn-secondary text-sm disabled:opacity-30 inline-flex items-center gap-1"
+                >
+                  <ChevronRight className="w-4 h-4" /> السابق
+                </button>
+                <span className="text-xs text-gray-400">
+                  صفحة {data.transactions.meta.current_page} من {data.transactions.meta.last_page}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(data.transactions.meta.last_page, p + 1))}
+                  disabled={page === data.transactions.meta.last_page}
+                  className="btn-secondary text-sm disabled:opacity-30 inline-flex items-center gap-1"
+                >
+                  التالي <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      </>)}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">سحب الأرباح</h3>
+              <button onClick={() => setShowWithdrawModal(false)} className="text-gray-400 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+              الرصيد المتاح: <span className="font-bold text-black">${Number(data?.balance || 0).toFixed(2)}</span>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">المبلغ</label>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                className="input-field"
+                placeholder="أدخل المبلغ"
+                min={0}
+                max={data?.balance || 0}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">طريقة السحب</label>
+              <select
+                value={withdrawMethod}
+                onChange={(e) => setWithdrawMethod(e.target.value)}
+                className="input-field"
+              >
+                <option value="zain_cash">Zain Cash</option>
+                <option value="fib">FIB</option>
+                <option value="qi_card">Qi Card</option>
+                <option value="bank_transfer">تحويل بنكي</option>
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleWithdraw}
+                disabled={submitting || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                {submitting ? 'جاري السحب...' : 'تأكيد السحب'}
+              </button>
+              <button onClick={() => setShowWithdrawModal(false)} className="btn-secondary flex-1">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
