@@ -1,23 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'react-hot-toast';
 import {
-  User, Mail, Building2, Lock, Bell, Shield,
+  User, Mail, Building2, Lock, Bell, Shield, BadgeCheck,
   Save, Eye, EyeOff, Camera,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { TabbedFormSkeleton } from '@/components/shared/Skeleton';
+import KycForm from '@/components/KycForm';
 
-type Tab = 'profile' | 'password' | 'notifications';
+type Tab = 'profile' | 'kyc' | 'password' | 'notifications';
 
 export default function AdvertiserSettings() {
   const { user, setUser, isLoading } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [kycRefreshKey, setKycRefreshKey] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState({
     name: '',
@@ -91,6 +95,27 @@ export default function AdvertiserSettings() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('collection', 'avatar');
+      const res = await api.post('/media/upload', formData);
+      const avatarUrl = res.data.url;
+      await api.put('/auth/profile', { avatar: avatarUrl });
+      setUser({ ...user, avatar: avatarUrl } as any);
+      toast.success('تم تحديث الصورة الشخصية');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'فشل رفع الصورة');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
   const updateNotifications = async () => {
     setSaving(true);
     try {
@@ -105,6 +130,7 @@ export default function AdvertiserSettings() {
 
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'profile', label: 'الملف الشخصي', icon: User },
+    ...(user?.kyc_status !== 'verified' ? [{ key: 'kyc' as Tab, label: 'توثيق الحساب', icon: Shield }] : []),
     { key: 'password', label: 'كلمة المرور', icon: Lock },
     { key: 'notifications', label: 'الإشعارات', icon: Bell },
   ];
@@ -125,15 +151,28 @@ export default function AdvertiserSettings() {
         <TabbedFormSkeleton />
       ) : (<>
 
+      <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleAvatarUpload} />
+
       <div className="flex items-center gap-4 p-5 bg-white rounded-xl border border-gray-200">
-        <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center text-xl font-bold text-white shrink-0 relative group cursor-pointer">
-          {user?.name?.[0] || '?'}
+        <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+          {user?.avatar ? (
+            <img src={user.avatar} alt="" className="w-16 h-16 rounded-full object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center text-xl font-bold text-white">
+              {user?.name?.[0] || '?'}
+            </div>
+          )}
           <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Camera className="w-5 h-5 text-white" />
           </div>
         </div>
         <div>
-          <h2 className="font-bold text-black">{user?.name || 'المعلن'}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-black">{user?.name || 'المعلن'}</h2>
+            {user?.kyc_status === 'verified' && (
+              <BadgeCheck className="w-4 h-4 text-blue-500" />
+            )}
+          </div>
           <p className="text-sm text-gray-400">{user?.email}</p>
           <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">
             معلن
@@ -227,6 +266,22 @@ export default function AdvertiserSettings() {
               </button>
             </div>
           </motion.form>
+        )}
+
+        {activeTab === 'kyc' && (
+          <motion.div
+            key="kyc"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="bg-white rounded-xl border border-gray-200 p-6 space-y-5"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="w-5 h-5" />
+              <h2 className="text-lg font-bold text-black">توثيق الحساب</h2>
+            </div>
+            <KycForm role={user?.role} onVerified={() => setKycRefreshKey(k => k + 1)} />
+          </motion.div>
         )}
 
         {activeTab === 'password' && (

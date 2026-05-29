@@ -32,7 +32,7 @@ export default function Navbar() {
     <nav className="h-16 border-b border-gray-200 bg-white sticky top-0 z-40">
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
         <Link href="/" className="flex-shrink-0">
-          <img src="/logo.svg" alt="UGCLab" className="h-12 w-auto" />
+          <img src="/logo.PNG" alt="UGCLab" className="h-12 w-auto" />
         </Link>
 
         <div className="flex items-center gap-3">

@@ -73,12 +73,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: false });
         return;
       }
+      const cachedUser = localStorage.getItem('user');
+      if (cachedUser) {
+        set({ user: JSON.parse(cachedUser), token });
+      }
       const res = await api.get('/auth/me');
       set({ user: res.data, token, isLoading: false });
+      localStorage.setItem('user', JSON.stringify(res.data));
     } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      set({ isLoading: false });
+      const cachedUser = localStorage.getItem('user');
+      if (cachedUser) {
+        set({ isLoading: false });
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ isLoading: false });
+      }
     }
   },
 

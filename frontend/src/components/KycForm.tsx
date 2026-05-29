@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
-import { Toaster, toast } from 'react-hot-toast';
-import { Shield, Upload, FileText, CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import {
+  Shield, Upload, FileText, CheckCircle, XCircle, AlertCircle, ExternalLink, BadgeCheck,
+} from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const kycLabels: Record<string, { label: string; classes: string }> = {
@@ -27,29 +27,25 @@ const requiredDocs: Record<string, string[]> = {
   advertiser: ['id_card', 'business_license'],
 };
 
-export default function KycPage() {
-  const { user } = useAuthStore();
-  const router = useRouter();
+export default function KycForm({ role, onVerified }: { role?: string; onVerified?: () => void }) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState('');
+  const [kycStatus, setKycStatus] = useState<string>('not_submitted');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (user) {
-      const target = user.role === 'advertiser' ? '/advertiser/settings' : '/creator/settings';
-      router.replace(target);
-    }
-  }, [user, router]);
 
   const fetchDocuments = () => {
     api.get('/kyc/my-documents').then((r) => {
-      setDocuments(r.data || []);
+      const docs = r.data || [];
+      setDocuments(docs);
     }).catch(() => {}).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchDocuments(); }, []);
+  useEffect(() => {
+    fetchDocuments();
+    api.get('/auth/me').then((r) => setKycStatus(r.data.kyc_status || 'not_submitted'));
+  }, []);
 
   const docStatus = (type: string) => {
     const doc = documents.find((d) => d.document_type === type);
@@ -68,6 +64,8 @@ export default function KycPage() {
       toast.success('تم رفع المستند بنجاح');
       setUploadType('');
       fetchDocuments();
+      api.get('/auth/me').then((r) => setKycStatus(r.data.kyc_status || 'not_submitted'));
+      onVerified?.();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'فشل رفع المستند');
     } finally {
@@ -84,56 +82,49 @@ export default function KycPage() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
   const getDocUrl = (docId: number) => `${apiBase}/kyc/documents/${docId}`;
 
-  const role = user?.role || 'creator';
-  const docsNeeded = requiredDocs[role] || [];
+  const userRole = role || 'creator';
+  const docsNeeded = requiredDocs[userRole] || [];
+
+  if (kycStatus === 'verified') {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+        <BadgeCheck className="w-12 h-12 text-green-500 mx-auto mb-3" />
+        <p className="text-sm font-bold text-green-800 mb-1">تم توثيق حسابك بنجاح</p>
+        <p className="text-xs text-green-600">حسابك موثق بالكامل. يمكنك الاستفادة من جميع مزايا المنصة.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 py-6">
-      <Toaster position="top-center" />
-
-      <div>
-        <h1 className="page-title">توثيق الحساب</h1>
-        <p className="page-subtitle">رفع المستندات المطلوبة لتوثيق حسابك</p>
-      </div>
-
+    <div className="space-y-4">
       {/* Status Banner */}
       <div className={`rounded-xl border p-4 flex items-start gap-3 ${
-        user?.kyc_status === 'verified' ? 'bg-green-50 border-green-200' :
-        user?.kyc_status === 'rejected' ? 'bg-red-50 border-red-200' :
-        user?.kyc_status === 'pending' ? 'bg-amber-50 border-amber-200' :
+        kycStatus === 'rejected' ? 'bg-red-50 border-red-200' :
+        kycStatus === 'pending' ? 'bg-amber-50 border-amber-200' :
         'bg-gray-50 border-gray-200'
       }`}>
-        {user?.kyc_status === 'verified' ? (
-          <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-        ) : user?.kyc_status === 'rejected' ? (
+        {kycStatus === 'rejected' ? (
           <XCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
         ) : (
           <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
         )}
         <div>
           <p className={`text-sm font-bold ${
-            user?.kyc_status === 'verified' ? 'text-green-800' :
-            user?.kyc_status === 'rejected' ? 'text-red-800' :
-            'text-amber-800'
-          }`}>
-            {kycLabels[user?.kyc_status || 'not_submitted']?.label}
-          </p>
+            kycStatus === 'rejected' ? 'text-red-800' : 'text-amber-800'
+          }`}>{kycLabels[kycStatus]?.label}</p>
           <p className={`text-xs mt-0.5 ${
-            user?.kyc_status === 'verified' ? 'text-green-600' :
-            user?.kyc_status === 'rejected' ? 'text-red-600' :
-            'text-amber-600'
+            kycStatus === 'rejected' ? 'text-red-600' : 'text-amber-600'
           }`}>
-            {user?.kyc_status === 'not_submitted' && 'يرجى رفع المستندات المطلوبة أدناه'}
-            {user?.kyc_status === 'pending' && 'مستنداتك قيد المراجعة من قبل فريق التوثيق'}
-            {user?.kyc_status === 'verified' && 'تم توثيق حسابك بنجاح'}
-            {user?.kyc_status === 'rejected' && 'لم يتم الموافقة على مستنداتك. يرجى رفع مستندات جديدة'}
+            {kycStatus === 'not_submitted' && 'يرجى رفع المستندات المطلوبة أدناه'}
+            {kycStatus === 'pending' && 'مستنداتك قيد المراجعة من قبل فريق التوثيق'}
+            {kycStatus === 'rejected' && 'لم يتم الموافقة على مستنداتك. يرجى رفع مستندات جديدة'}
           </p>
         </div>
       </div>
 
       {/* Documents List */}
-      <div className="card">
-        <h2 className="text-sm font-bold text-black mb-4">المستندات المطلوبة</h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-bold text-black mb-4">المستندات المطلوبة</h3>
 
         {loading ? (
           <div className="flex justify-center py-8">
@@ -167,11 +158,7 @@ export default function KycPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {doc && (
-                        <a
-                          href={getDocUrl(doc.id)}
-                          target="_blank"
-                          className="text-xs text-gray-500 hover:text-black inline-flex items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
+                        <a href={getDocUrl(doc.id)} target="_blank" className="text-xs text-gray-500 hover:text-black inline-flex items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
@@ -181,8 +168,7 @@ export default function KycPage() {
                           disabled={uploading}
                           className="text-xs px-3 py-1.5 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
                         >
-                          <Upload className="w-3 h-3" />
-                          رفع
+                          <Upload className="w-3 h-3" /> رفع
                         </button>
                       )}
                     </div>
@@ -198,24 +184,7 @@ export default function KycPage() {
           </div>
         )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-      </div>
-
-      {/* Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-        <Shield className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-bold text-blue-800">لماذا يجب توثيق الحساب؟</p>
-          <p className="text-xs text-blue-600 mt-1">
-            توثيق الحساب يزيد من مصداقيتك ويساعد المعلنين على الثقة بك. المستندات المطلوبة تختلف حسب دورك في المنصة.
-          </p>
-        </div>
+        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
       </div>
     </div>
   );

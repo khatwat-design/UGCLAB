@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 py-16">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <img src="/logo.svg" alt="UGCLab" className="h-12 w-auto mb-5" />
+            <img src="/logo.PNG" alt="UGCLab" className="h-12 w-auto mb-5" />
             <p className="text-sm text-gray-500 leading-relaxed">
               أول منصة عراقية تربط صناع المحتوى بالمعلنين بطريقة احترافية وآمنة.
             </p>

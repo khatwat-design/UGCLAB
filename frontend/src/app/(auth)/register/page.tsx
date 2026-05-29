@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import api from '@/lib/api';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CREATOR_CATEGORIES, ADVERTISER_INDUSTRIES } from '@/lib/constants';
+import { CREATOR_CATEGORIES, ADVERTISER_INDUSTRIES, IRAQI_GOVERNORATES } from '@/lib/constants';
 import {
   ChevronLeft, ChevronRight, Upload, X, CheckCircle, FileText,
   User, Building2, Camera, Film, Tv, Globe as GlobeIcon,
@@ -185,7 +185,7 @@ function RegisterWizard() {
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <img src="/logo.svg" alt="UGCLab" className="h-10 sm:h-12 w-auto mx-auto" />
+            <img src="/logo.PNG" alt="UGCLab" className="h-10 sm:h-12 w-auto mx-auto" />
           </Link>
           <p className="mt-2 text-sm text-gray-500">إنشاء حساب جديد</p>
         </div>
@@ -270,11 +270,20 @@ function RegisterWizard() {
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       رقم الهاتف <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-[1fr_120px] gap-2">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        className="input-field"
+                        placeholder="xxx xxx xxxx"
+                        required
+                        dir="ltr"
+                      />
                       <select
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        className="input-field w-[120px] shrink-0 text-center"
+                        className="input-field text-center"
                         dir="ltr"
                       >
                         <option value="+964">🇮🇶 +964</option>
@@ -288,15 +297,6 @@ function RegisterWizard() {
                         <option value="+1">🇺🇸 +1</option>
                         <option value="+44">🇬🇧 +44</option>
                       </select>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        className="input-field flex-1"
-                        placeholder="xxx xxx xxxx"
-                        required
-                        dir="ltr"
-                      />
                     </div>
                   </div>
                   <div>
@@ -381,12 +381,22 @@ function RegisterWizard() {
                             <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="input-field min-h-[60px]" placeholder="العنوان الكامل..." />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
-                            <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="input-field" placeholder="بغداد" />
+                            <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
+                            <select value={state} onChange={(e) => { setState(e.target.value); setCity(''); }} className="input-field">
+                              <option value="">اختر المحافظة</option>
+                              {Object.keys(IRAQI_GOVERNORATES).map((gov) => (
+                                <option key={gov} value={gov}>{gov}</option>
+                              ))}
+                            </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
-                            <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="input-field" placeholder="بغداد" />
+                            <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
+                            <select value={city} onChange={(e) => setCity(e.target.value)} className="input-field" disabled={!state}>
+                              <option value="">اختر المدينة</option>
+                              {state && IRAQI_GOVERNORATES[state]?.map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                         <p className="text-[10px] text-gray-400 mt-2">هذا العنوان سيتم إرساله للمعلن عند الموافقة على طلبك لشحن المنتجات</p>
@@ -518,7 +528,7 @@ function RegisterWizard() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><img src="/logo-icon.svg" alt="loading" className="h-10 w-auto opacity-40 animate-spin-slow" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><img src="/icon.PNG" alt="loading" className="h-10 w-auto opacity-40 animate-spin-slow" /></div>}>
       <RegisterWizard />
     </Suspense>
   );

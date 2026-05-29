@@ -1,16 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { Toaster, toast } from 'react-hot-toast';
-import { User, Lock, Bell, Save } from 'lucide-react';
-import { CREATOR_CATEGORIES } from '@/lib/constants';
+import { User, Lock, Bell, Shield, Save, Camera, BadgeCheck } from 'lucide-react';
+import { CREATOR_CATEGORIES, IRAQI_GOVERNORATES } from '@/lib/constants';
 import { TabbedFormSkeleton } from '@/components/shared/Skeleton';
+import { useAuthStore } from '@/stores/authStore';
+import KycForm from '@/components/KycForm';
+
+type Tab = 'profile' | 'kyc' | 'password' | 'notifications';
 
 export default function CreatorSettings() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications'>('profile');
+  const { user, setUser } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [kycRefreshKey, setKycRefreshKey] = useState(0);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,7 +35,6 @@ export default function CreatorSettings() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('');
-
   const [notifications, setNotifications] = useState({
     new_campaign: true,
     application_update: true,
@@ -99,6 +106,27 @@ export default function CreatorSettings() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('collection', 'avatar');
+      const res = await api.post('/media/upload', formData);
+      const avatarUrl = res.data.url;
+      await api.put('/auth/profile', { avatar: avatarUrl });
+      if (user) setUser({ ...user, avatar: avatarUrl });
+      toast.success('تم تحديث الصورة الشخصية');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'فشل رفع الصورة');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -111,11 +139,12 @@ export default function CreatorSettings() {
     );
   }
 
-  const tabs = [
+  const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'profile', label: 'الملف الشخصي', icon: User },
+    ...(user?.kyc_status !== 'verified' ? [{ key: 'kyc' as Tab, label: 'توثيق الحساب', icon: Shield }] : []),
     { key: 'password', label: 'كلمة المرور', icon: Lock },
     { key: 'notifications', label: 'الإشعارات', icon: Bell },
-  ] as const;
+  ];
 
   return (
     <div className="space-y-6">
@@ -145,9 +174,35 @@ export default function CreatorSettings() {
         })}
       </div>
 
+      <input ref={avatarInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleAvatarUpload} />
+
       <div className="card">
         {activeTab === 'profile' && (
           <div className="space-y-4">
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
+              <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-16 h-16 rounded-full object-cover" />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center text-xl font-bold text-white">
+                    {user?.name?.[0] || '?'}
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-black">{user?.name}</h2>
+                  {user?.kyc_status === 'verified' && (
+                    <BadgeCheck className="w-4 h-4 text-blue-500" />
+                  )}
+                </div>
+                <p className="text-sm text-gray-400">{user?.email}</p>
+              </div>
+            </div>
+
             <h2 className="text-lg font-bold text-black">الملف الشخصي</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -193,12 +248,22 @@ export default function CreatorSettings() {
                   <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="input-field min-h-[60px]" placeholder="العنوان الكامل..." />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
-                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="input-field" placeholder="بغداد" />
+                  <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
+                  <select value={stateField} onChange={(e) => { setStateField(e.target.value); setCity(''); }} className="input-field">
+                    <option value="">اختر المحافظة</option>
+                    {Object.keys(IRAQI_GOVERNORATES).map((gov) => (
+                      <option key={gov} value={gov}>{gov}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">المحافظة</label>
-                  <input type="text" value={stateField} onChange={(e) => setStateField(e.target.value)} className="input-field" placeholder="بغداد" />
+                  <label className="block text-xs font-medium text-gray-700 mb-1">المدينة</label>
+                  <select value={city} onChange={(e) => setCity(e.target.value)} className="input-field" disabled={!stateField}>
+                    <option value="">اختر المدينة</option>
+                    {stateField && IRAQI_GOVERNORATES[stateField]?.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -206,6 +271,16 @@ export default function CreatorSettings() {
             <button onClick={handleSaveProfile} disabled={saving} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
               <Save className="w-4 h-4" /> حفظ التغييرات
             </button>
+          </div>
+        )}
+
+        {activeTab === 'kyc' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5" />
+              <h2 className="text-lg font-bold text-black">توثيق الحساب</h2>
+            </div>
+            <KycForm role={user?.role} onVerified={() => setKycRefreshKey(k => k + 1)} />
           </div>
         )}
 

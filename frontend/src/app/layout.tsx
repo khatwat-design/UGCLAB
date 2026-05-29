@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "UGCLab - منصة الربط بين المبدعين والمعلنين",
   description: "أول منصة عراقية تربط صناع المحتوى بالمعلنين",
   icons: {
-    icon: "/logo-icon.svg",
+    icon: "/icon.PNG",
   },
 };
 

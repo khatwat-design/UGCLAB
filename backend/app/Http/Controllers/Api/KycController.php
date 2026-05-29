@@ -37,13 +37,19 @@ class KycController extends Controller
     {
         $validated = $request->validate([
             'document_type' => ['required', 'string', 'in:id_card,passport,business_license,portfolio'],
-            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx,webp,gif', 'max:51200'],
         ]);
 
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
-        // Store in private/local disk - NOT publicly accessible
-        $path = $file->store('kyc-documents/' . $request->user()->id, 'local');
+
+        $directory = 'kyc-documents/' . $request->user()->id;
+        $storagePath = storage_path('app/private/' . $directory);
+        if (!file_exists($storagePath)) {
+            mkdir($storagePath, 0755, true);
+        }
+
+        $path = $file->store($directory, 'local');
 
         $document = KycDocument::create([
             'user_id' => $request->user()->id,

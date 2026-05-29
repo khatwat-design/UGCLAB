@@ -86,7 +86,7 @@ export default function AdvertiserDashboard() {
             </p>
           </div>
           <Link
-            href="/kyc"
+            href="/advertiser/settings"
             className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
               user.kyc_status === 'rejected'
                 ? 'bg-red-600 text-white hover:bg-red-700'

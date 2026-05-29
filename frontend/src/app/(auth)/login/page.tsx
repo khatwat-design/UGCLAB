@@ -45,7 +45,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <img src="/logo.svg" alt="UGCLab" className="h-10 sm:h-12 w-auto mx-auto" />
+            <img src="/logo.PNG" alt="UGCLab" className="h-10 sm:h-12 w-auto mx-auto" />
           </Link>
           <p className="mt-2 text-sm text-gray-500">تسجيل الدخول إلى حسابك</p>
         </div>
@@ -108,7 +108,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-full max-w-sm mx-auto px-4 space-y-6"><div className="flex justify-center mb-8"><img src="/logo-icon.svg" alt="UGCLab" className="h-12 w-auto opacity-40 animate-spin-slow" /></div><div className="space-y-4"><div className="h-10 bg-gray-100 rounded-lg animate-pulse" /><div className="h-10 bg-gray-100 rounded-lg animate-pulse" /><div className="h-10 bg-black/10 rounded-lg animate-pulse" /></div></div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-full max-w-sm mx-auto px-4 space-y-6"><div className="flex justify-center mb-8"><img src="/icon.PNG" alt="UGCLab" className="h-12 w-auto opacity-40 animate-spin-slow" /></div><div className="space-y-4"><div className="h-10 bg-gray-100 rounded-lg animate-pulse" /><div className="h-10 bg-gray-100 rounded-lg animate-pulse" /><div className="h-10 bg-black/10 rounded-lg animate-pulse" /></div></div></div>}>
       <LoginForm />
     </Suspense>
   );

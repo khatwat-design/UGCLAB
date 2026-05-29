@@ -54,7 +54,7 @@ export default function ForgotPassword() {
       >
         <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
           <Link href="/" className="block mb-6">
-            <img src="/logo.svg" alt="UGCLab" className="h-10 w-auto mx-auto" />
+            <img src="/logo.PNG" alt="UGCLab" className="h-10 w-auto mx-auto" />
           </Link>
           <Link href="/login" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-black mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" /> العودة لتسجيل الدخول
