@@ -64,9 +64,13 @@ export default function AdminLogs() {
                 <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-xs font-bold text-white">
-                        {log.admin?.name?.[0] || '?'}
-                      </div>
+                      {log.admin?.avatar ? (
+                        <img src={log.admin.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-xs font-bold text-white">
+                          {log.admin?.name?.[0] || '?'}
+                        </div>
+                      )}
                       <span className="text-sm">{log.admin?.name || 'غير معروف'}</span>
                     </div>
                   </td>

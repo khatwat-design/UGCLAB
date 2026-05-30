@@ -284,13 +284,30 @@ class AdminController extends Controller
 
     public function analytics()
     {
-        // Gender distribution
+        // ── Summary counts ──
+        $summary = [
+            'total_users' => User::count(),
+            'total_creators' => User::where('role', 'creator')->count(),
+            'total_advertisers' => User::where('role', 'advertiser')->count(),
+            'total_campaigns' => Campaign::count(),
+            'active_campaigns' => Campaign::whereIn('status', ['active', 'open'])->count(),
+            'platform_revenue' => Payment::where('status', 'released')->sum('platform_fee'),
+            'payments_held' => Payment::where('status', 'held')->sum('amount'),
+            'payments_released' => Payment::where('status', 'released')->sum('amount'),
+            'pending_kyc' => User::where('kyc_status', 'pending')->count(),
+            'total_wallet_balance' => \App\Models\Wallet::sum('balance'),
+            'total_wallet_pending' => \App\Models\Wallet::sum('pending_balance'),
+            'pending_deposits' => \App\Models\DepositRequest::where('status', 'pending')->count(),
+            'pending_settlements' => \App\Models\SettlementRequest::where('status', 'pending')->count(),
+        ];
+
+        // ── Gender distribution by role ──
         $genderStats = User::whereNotNull('gender')
             ->selectRaw("gender, role, COUNT(*) as count")
             ->groupBy('gender', 'role')
             ->get();
 
-        // Age distribution (grouped)
+        // ── Age distribution ──
         $now = now()->toDateString();
         $ageRanges = [
             'under_18' => ['min' => 0, 'max' => 17],
@@ -308,7 +325,7 @@ class AdminController extends Controller
             $ageStats[$label] = $count;
         }
 
-        // Campaign demographic targeting distribution
+        // ── Campaign demographics ──
         $campaignDemographics = [
             'target_gender' => Campaign::whereNotNull('target_gender')
                 ->selectRaw("target_gender, COUNT(*) as count")
@@ -323,34 +340,59 @@ class AdminController extends Controller
             'avg_videos_per_creator' => Campaign::avg('videos_per_creator'),
         ];
 
-        // Creator filter usage (category distribution)
+        // ── Creator category distribution ──
         $categoryStats = \App\Models\CreatorProfile::whereNotNull('category')
             ->selectRaw("category, COUNT(*) as count")
             ->groupBy('category')
             ->orderByDesc('count')
             ->get();
 
-        // Monthly registrations (last 12 months)
+        // ── Monthly registrations (last 12 months) ──
         $monthlyRegistrations = User::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
             ->where('created_at', '>=', now()->subMonths(12))
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month');
 
-        // Monthly campaigns created
+        // ── Monthly campaigns created ──
         $monthlyCampaigns = Campaign::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
             ->where('created_at', '>=', now()->subMonths(12))
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month');
 
+        // ── Monthly revenue (last 12 months) ──
+        $monthlyRevenue = Payment::where('status', 'released')
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, SUM(platform_fee) as total")
+            ->where('created_at', '>=', now()->subMonths(12))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
+
+        // ── Campaign status breakdown ──
+        $campaignStatusStats = Campaign::selectRaw("status, COUNT(*) as count")
+            ->groupBy('status')
+            ->orderByDesc('count')
+            ->get();
+
+        // ── Recent users (last 10) ──
+        $recentUsers = User::latest()->take(10)->get();
+
+        // ── Recent campaigns ──
+        $recentCampaigns = Campaign::with('advertiser')->latest()->take(10)->get();
+
         return response()->json([
+            'summary' => $summary,
             'gender_distribution' => $genderStats,
             'age_distribution' => $ageStats,
             'campaign_demographics' => $campaignDemographics,
             'category_distribution' => $categoryStats,
             'monthly_registrations' => $monthlyRegistrations,
             'monthly_campaigns' => $monthlyCampaigns,
+            'monthly_revenue' => $monthlyRevenue,
+            'campaign_status_stats' => $campaignStatusStats,
+            'recent_users' => $recentUsers,
+            'recent_campaigns' => $recentCampaigns,
         ]);
     }
 

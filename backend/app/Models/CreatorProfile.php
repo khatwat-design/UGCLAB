@@ -20,6 +20,9 @@ class CreatorProfile extends Model
         'state',
         'zip_code',
         'country',
+        'payment_method',
+        'payment_phone',
+        'payment_name',
     ];
 
     protected function casts(): array

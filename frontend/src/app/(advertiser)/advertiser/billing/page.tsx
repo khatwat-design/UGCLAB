@@ -159,13 +159,6 @@ export default function AdvertiserBilling() {
             سحب
           </button>
           <button
-            onClick={() => setShowDeposit(true)}
-            className="inline-flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all hover:shadow-lg hover:scale-[1.02]"
-          >
-            <Plus className="w-4 h-4" />
-            إيداع
-          </button>
-          <button
             onClick={() => setShowReceiptDeposit(true)}
             className="inline-flex items-center gap-1.5 bg-white text-gray-700 px-4 py-2.5 rounded-xl text-sm font-bold border border-gray-200 hover:border-gray-400 hover:text-black transition-all"
           >
@@ -346,76 +339,6 @@ export default function AdvertiserBilling() {
       </motion.div>
 
       <AnimatePresence>
-        {showDeposit && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowDeposit(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-5 shadow-xl"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-black">إيداع رصيد</h3>
-                  <p className="text-xs text-gray-400">اختر المبلغ وطريقة الدفع</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">المبلغ ($)</label>
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-lg font-bold text-center focus:border-black outline-none transition-colors"
-                  placeholder="0.00"
-                  min="1"
-                  autoFocus
-                />
-              </div>
-
-              <div className="grid grid-cols-5 gap-2">
-                {quickAmounts.map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => setDepositAmount(String(amount))}
-                    className="py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition-all"
-                  >
-                    ${amount}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDeposit}
-                  disabled={isSubmitting}
-                  className="flex-1 bg-black text-white py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 hover:shadow-lg"
-                >
-                  {isSubmitting ? 'جاري...' : 'تأكيد الإيداع'}
-                </button>
-                <button
-                  onClick={() => setShowDeposit(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
         {showReceiptDeposit && (
           <motion.div
             initial={{ opacity: 0 }}

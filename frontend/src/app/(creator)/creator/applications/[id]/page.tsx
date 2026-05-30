@@ -31,6 +31,7 @@ const shippingConfig: Record<string, { label: string; classes: string }> = {
 const statusWorkflow = [
   { key: 'pending', label: 'قيد المراجعة' },
   { key: 'accepted', label: 'مقبول' },
+  { key: 'revision_requested', label: 'طلب تعديل' },
   { key: 'in_progress', label: 'قيد التنفيذ' },
   { key: 'completed', label: 'مكتمل' },
 ];
@@ -167,8 +168,9 @@ export default function CreatorApplicationDetail() {
   const currentStepIndex = statusWorkflow.findIndex((s) => {
     if (s.key === 'pending') return application.status === 'pending';
     if (s.key === 'accepted') return application.status === 'accepted';
+    if (s.key === 'revision_requested') return application.status === 'revision_requested';
     if (s.key === 'in_progress') return application.status === 'accepted';
-    if (s.key === 'completed') return application.status === 'completed' || application.status === 'revision_requested';
+    if (s.key === 'completed') return application.status === 'completed';
     return false;
   });
 
@@ -351,9 +353,13 @@ export default function CreatorApplicationDetail() {
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <p className="text-[11px] text-gray-500 font-medium mb-1">المعلن</p>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-xs font-bold text-white">
-                      {advertiser.name?.[0] || '?'}
-                    </div>
+                    {advertiser.avatar ? (
+                      <img src={advertiser.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-xs font-bold text-white">
+                        {advertiser.name?.[0] || '?'}
+                      </div>
+                    )}
                     <p className="text-sm text-black font-medium">{advertiser.name}</p>
                   </div>
                 </div>

@@ -195,9 +195,13 @@ export default function DiscoverCreators() {
                 className="block p-5 pb-0"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-base font-bold text-white shrink-0">
-                    {creator.name?.[0] || '?'}
-                  </div>
+                  {creator.avatar ? (
+                    <img src={creator.avatar} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-base font-bold text-white shrink-0">
+                      {creator.name?.[0] || '?'}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-sm text-black truncate">{creator.name}</h3>

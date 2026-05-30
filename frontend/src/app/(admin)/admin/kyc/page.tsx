@@ -151,9 +151,13 @@ export default function AdminKyc() {
           <div key={user.id} className="card hover:border-gray-300 transition-colors">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4 flex-1 min-w-0">
-                <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-lg font-bold text-white shrink-0">
-                  {user.name?.[0] || '?'}
-                </div>
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-lg font-bold text-white shrink-0">
+                    {user.name?.[0] || '?'}
+                  </div>
+                )}
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-sm text-black">{user.name}</h3>

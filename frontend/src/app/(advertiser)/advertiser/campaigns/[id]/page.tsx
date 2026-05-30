@@ -24,7 +24,7 @@ const appStatusConfig: Record<string, { label: string; classes: string }> = {
   pending: { label: 'بانتظار المراجعة', classes: 'bg-gray-100 text-gray-600' },
   accepted: { label: 'مقبول', classes: 'bg-black text-white' },
   rejected: { label: 'مرفوض', classes: 'bg-gray-100 text-gray-400' },
-  in_revision: { label: 'مراجعة', classes: 'bg-amber-50 text-amber-700' },
+  revision_requested: { label: 'طلب تعديل', classes: 'bg-amber-50 text-amber-700' },
   completed: { label: 'مكتمل', classes: 'bg-gray-100 text-gray-500' },
 };
 
@@ -410,9 +410,13 @@ export default function CampaignDetail() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                            {app.creator?.name?.[0] || '?'}
-                          </div>
+                          {app.creator?.avatar ? (
+                            <img src={app.creator.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                              {app.creator?.name?.[0] || '?'}
+                            </div>
+                          )}
                           <div>
                             <h3 className="font-bold text-sm text-black">{app.creator?.name}</h3>
                             <p className="text-xs text-gray-400">

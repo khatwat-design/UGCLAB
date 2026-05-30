@@ -118,9 +118,13 @@ export default function MessagesPage() {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                      {conv.user.name?.[0] || '?'}
-                    </div>
+                    {conv.user.avatar ? (
+                      <img src={conv.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                        {conv.user.name?.[0] || '?'}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium text-black truncate">{conv.user.name}</p>
@@ -165,9 +169,13 @@ export default function MessagesPage() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                {selectedUser.name?.[0] || '?'}
-              </div>
+              {selectedUser.avatar ? (
+                <img src={selectedUser.avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                  {selectedUser.name?.[0] || '?'}
+                </div>
+              )}
               <div>
                 <p className="font-bold text-sm text-black">{selectedUser.name}</p>
                 <p className="text-xs text-gray-400">{selectedUser.creator_profile?.category || 'مبدع'}</p>
@@ -187,9 +195,13 @@ export default function MessagesPage() {
                       className={`flex gap-2 ${isMine ? 'justify-start' : 'justify-end'}`}
                     >
                       {!isMine && showAvatar && (
-                        <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-1">
-                          {selectedUser.name?.[0] || '?'}
-                        </div>
+                        selectedUser.avatar ? (
+                          <img src={selectedUser.avatar} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 mt-1" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-1">
+                            {selectedUser.name?.[0] || '?'}
+                          </div>
+                        )
                       )}
                       {!isMine && !showAvatar && <div className="w-7 shrink-0" />}
                       <div className={`max-w-[75%] ${isMine ? 'order-1' : 'order-2'}`}>

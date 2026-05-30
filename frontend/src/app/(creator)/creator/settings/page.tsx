@@ -77,7 +77,7 @@ export default function CreatorSettings() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      await api.put('/auth/profile', { name, email, gender, date_of_birth: dateOfBirth || undefined });
+      await api.put('/auth/profile', { name, email, gender: gender || undefined, date_of_birth: dateOfBirth || undefined });
       await api.put('/creator/profile', { category, platforms, followers_count: followersCount, engagement_rate: engagementRate, address, city, state: stateField, country: 'IQ' });
       toast.success('تم حفظ التغييرات');
     } catch (err: any) {

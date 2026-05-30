@@ -85,9 +85,13 @@ export default function CreatorProfile() {
         className="bg-white rounded-2xl border border-gray-200 p-6"
       >
         <div className="flex flex-col sm:flex-row items-start gap-5">
-          <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center text-2xl font-bold text-white shrink-0">
-            {creator.name?.[0] || '?'}
-          </div>
+          {creator.avatar ? (
+            <img src={creator.avatar} alt="" className="w-20 h-20 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center text-2xl font-bold text-white shrink-0">
+              {creator.name?.[0] || '?'}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="text-lg font-bold text-black">{creator.name}</h2>
