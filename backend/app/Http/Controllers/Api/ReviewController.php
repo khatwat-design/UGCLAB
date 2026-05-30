@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Review;
+use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
+use App\Models\Review;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class ReviewController extends Controller
 {
@@ -45,7 +46,7 @@ class ReviewController extends Controller
             })
             ->first();
 
-        if (!$application || $application->status !== 'completed') {
+        if (! $application || $application->status !== 'completed') {
             return response()->json(['message' => 'لا يمكن التقييم إلا بعد اكتمال الحملة'], 422);
         }
 
@@ -60,7 +61,7 @@ class ReviewController extends Controller
         try {
             $campaign = Campaign::find($validated['campaign_id']);
             $this->notificationService->send(
-                \App\Models\User::find($validated['reviewee_id']),
+                User::find($validated['reviewee_id']),
                 'new_review',
                 [
                     'message' => "قام {$user->name} بتقييمك في حملة \"{$campaign->title}\"",
@@ -68,7 +69,8 @@ class ReviewController extends Controller
                     'rating' => $validated['rating'],
                 ]
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($review->load(['reviewer', 'reviewee']), 201);
     }
@@ -81,7 +83,7 @@ class ReviewController extends Controller
             ->get();
     }
 
-    public function user(\App\Models\User $user)
+    public function user(User $user)
     {
         return Review::where('reviewee_id', $user->id)
             ->with(['reviewer', 'campaign'])

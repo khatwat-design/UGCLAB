@@ -2,25 +2,24 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
+use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Deliverable;
+use App\Models\Message;
 use App\Models\Notification;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\Wallet;
-use App\Enums\ApplicationStatus;
-use App\Enums\CampaignStatus;
-use App\Enums\PaymentStatus;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class AdvertiserController extends Controller
 {
     public function __construct(
         private NotificationService $notificationService
     ) {}
+
     public function dashboard()
     {
         $user = auth()->user();
@@ -31,7 +30,7 @@ class AdvertiserController extends Controller
             'total_spent' => Payment::where('advertiser_id', $user->id)
                 ->where('status', 'released')
                 ->sum('amount'),
-            'pending_applications' => CampaignApplication::whereHas('campaign', fn($q) => $q->where('advertiser_id', $user->id))
+            'pending_applications' => CampaignApplication::whereHas('campaign', fn ($q) => $q->where('advertiser_id', $user->id))
                 ->where('status', 'pending')
                 ->count(),
             'recent_campaigns' => $user->campaigns()->withCount('applications')->latest()->take(5)->get(),
@@ -67,12 +66,12 @@ class AdvertiserController extends Controller
         $user = auth()->user();
         $wallet = $user->wallet;
 
-        if (!$wallet || $wallet->balance < 50) {
+        if (! $wallet || $wallet->balance < 50) {
             return response()->json(['message' => 'يجب أن يكون رصيد محفظتك 50 دولاراً على الأقل لإنشاء حملة'], 422);
         }
 
         if ($wallet->balance < $validated['budget']) {
-            return response()->json(['message' => 'رصيد المحفظة غير كافٍ. الميزانية المطلوبة: ' . number_format($validated['budget'], 2) . ' دولار، الرصيد المتاح: ' . number_format($wallet->balance, 2) . ' دولار'], 422);
+            return response()->json(['message' => 'رصيد المحفظة غير كافٍ. الميزانية المطلوبة: '.number_format($validated['budget'], 2).' دولار، الرصيد المتاح: '.number_format($wallet->balance, 2).' دولار'], 422);
         }
 
         $data = array_merge($validated, ['status' => 'open']);
@@ -164,17 +163,19 @@ class AdvertiserController extends Controller
                 $campaign,
                 'accepted'
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         // Auto-create chat between advertiser and creator
         try {
-            \App\Models\Message::create([
+            Message::create([
                 'sender_id' => auth()->id(),
                 'receiver_id' => $application->creator_id,
                 'campaign_id' => $campaign->id,
                 'content' => "مرحباً! تم قبول طلبك للحملة: {$campaign->title} 🎉 يمكننا الآن مناقشة التفاصيل",
             ]);
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($application->fresh());
     }
@@ -197,7 +198,8 @@ class AdvertiserController extends Controller
                 $campaign,
                 'rejected'
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($application->fresh());
     }
@@ -255,17 +257,19 @@ class AdvertiserController extends Controller
                 $campaign,
                 $deliverable
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         // Close chat after payment completed
         try {
-            \App\Models\Message::create([
+            Message::create([
                 'sender_id' => auth()->id(),
                 'receiver_id' => $application->creator_id,
                 'campaign_id' => $campaign->id,
                 'content' => "تم اكتمال الحملة: {$campaign->title} وتحويل المستحقات ✅ شكراً لتعاونك",
             ]);
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($deliverable->fresh());
     }
@@ -301,7 +305,8 @@ class AdvertiserController extends Controller
                 $campaign,
                 $deliverable
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($deliverable->fresh());
     }
@@ -336,14 +341,15 @@ class AdvertiserController extends Controller
                 $campaign,
                 $application
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($application->fresh());
     }
 
     public function invite(User $creator)
     {
-        if (!$creator->isCreator()) {
+        if (! $creator->isCreator()) {
             return response()->json(['message' => 'User is not a creator'], 422);
         }
 
@@ -385,7 +391,8 @@ class AdvertiserController extends Controller
                 $campaign,
                 $deliverable
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($deliverable->fresh());
     }

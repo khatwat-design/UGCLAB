@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
+use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Deliverable;
+use App\Models\Media;
 use App\Models\SettlementRequest;
-use App\Enums\ApplicationStatus;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
 class CreatorController extends Controller
@@ -18,6 +18,7 @@ class CreatorController extends Controller
     public function __construct(
         private NotificationService $notificationService
     ) {}
+
     public function dashboard()
     {
         $user = auth()->user();
@@ -57,18 +58,18 @@ class CreatorController extends Controller
             ->when($user->gender, function ($q) {
                 $q->where(function ($q) use ($user) {
                     $q->whereNull('target_gender')
-                      ->orWhere('target_gender', 'any')
-                      ->orWhere('target_gender', $user->gender);
+                        ->orWhere('target_gender', 'any')
+                        ->orWhere('target_gender', $user->gender);
                 });
             })
             ->when($user->date_of_birth, function ($q) use ($user) {
                 $age = now()->diffInYears($user->date_of_birth);
                 $q->where(function ($q) use ($age) {
                     $q->whereNull('target_age_min')
-                      ->orWhere('target_age_min', '<=', $age);
+                        ->orWhere('target_age_min', '<=', $age);
                 })->where(function ($q) use ($age) {
                     $q->whereNull('target_age_max')
-                      ->orWhere('target_age_max', '>=', $age);
+                        ->orWhere('target_age_max', '>=', $age);
                 });
             })
             ->with('advertiser')
@@ -92,7 +93,7 @@ class CreatorController extends Controller
 
         $validated = $request->validate([
             'proposal' => ['required', 'string', 'max:5000'],
-            'proposed_rate' => ['required', 'numeric', 'min:0', 'max:' . $campaign->budget],
+            'proposed_rate' => ['required', 'numeric', 'min:0', 'max:'.$campaign->budget],
         ]);
 
         $application = CampaignApplication::create([
@@ -108,7 +109,8 @@ class CreatorController extends Controller
                 auth()->user(),
                 $campaign
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($application->load('campaign'), 201);
     }
@@ -130,7 +132,7 @@ class CreatorController extends Controller
         return response()->json(
             $application->load([
                 'campaign.advertiser',
-                'deliverables' => fn($q) => $q->latest(),
+                'deliverables' => fn ($q) => $q->latest(),
             ])
         );
     }
@@ -159,23 +161,23 @@ class CreatorController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store("uploads/deliverable/{$application->id}", 'public');
-            $media = \App\Models\Media::create([
+            $media = Media::create([
                 'user_id' => auth()->id(),
                 'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
                 'collection' => 'deliverable',
-                'model_type' => \App\Models\Deliverable::class,
+                'model_type' => Deliverable::class,
             ]);
             $contentUrl = $media->url;
         }
 
         if ($validated['media_id'] ?? null) {
-            $media = \App\Models\Media::find($validated['media_id']);
+            $media = Media::find($validated['media_id']);
             $contentUrl = $media->url;
             $media->update([
-                'model_type' => \App\Models\Deliverable::class,
+                'model_type' => Deliverable::class,
             ]);
         }
 
@@ -189,7 +191,7 @@ class CreatorController extends Controller
         ]);
 
         if ($validated['media_id'] ?? null) {
-            \App\Models\Media::where('id', $validated['media_id'])->update(['model_id' => $deliverable->id]);
+            Media::where('id', $validated['media_id'])->update(['model_id' => $deliverable->id]);
         }
 
         $application->update(['status' => $application->status === 'revision_requested' ? 'in_revision' : 'completed']);
@@ -208,7 +210,8 @@ class CreatorController extends Controller
                     'application_id' => $application->id,
                 ]
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($deliverable->load('application.campaign'), 201);
     }
@@ -234,7 +237,8 @@ class CreatorController extends Controller
                 $application->campaign,
                 $application
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($application->fresh());
     }
@@ -249,12 +253,12 @@ class CreatorController extends Controller
         $user = auth()->user();
         $wallet = $user->wallet;
 
-        if (!$wallet || $wallet->pending_balance <= 0) {
+        if (! $wallet || $wallet->pending_balance <= 0) {
             return response()->json(['message' => 'No pending balance to settle'], 422);
         }
 
         $validated = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1', 'max:' . $wallet->pending_balance],
+            'amount' => ['required', 'numeric', 'min:1', 'max:'.$wallet->pending_balance],
         ]);
 
         $settlementRequest = SettlementRequest::create([
@@ -265,7 +269,7 @@ class CreatorController extends Controller
 
         // Notify all admins
         try {
-            $admins = \App\Models\User::where('role', 'admin')->where('is_active', true)->get();
+            $admins = User::where('role', 'admin')->where('is_active', true)->get();
             foreach ($admins as $admin) {
                 $this->notificationService->notifyNewSettlementRequest(
                     $admin,
@@ -273,7 +277,8 @@ class CreatorController extends Controller
                     $validated['amount']
                 );
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($settlementRequest, 201);
     }
@@ -359,27 +364,27 @@ class CreatorController extends Controller
         $query = User::where('role', 'creator')->where('is_active', true)
             ->with('creatorProfile');
 
-        if (!empty($validated['category'])) {
-            $query->whereHas('creatorProfile', fn($q) => $q->where('category', $validated['category']));
+        if (! empty($validated['category'])) {
+            $query->whereHas('creatorProfile', fn ($q) => $q->where('category', $validated['category']));
         }
 
-        if (!empty($validated['min_followers'])) {
-            $query->whereHas('creatorProfile', fn($q) => $q->where('followers_count', '>=', $validated['min_followers']));
+        if (! empty($validated['min_followers'])) {
+            $query->whereHas('creatorProfile', fn ($q) => $q->where('followers_count', '>=', $validated['min_followers']));
         }
 
-        if (!empty($validated['search'])) {
-            $query->where('name', 'like', '%' . $validated['search'] . '%');
+        if (! empty($validated['search'])) {
+            $query->where('name', 'like', '%'.$validated['search'].'%');
         }
 
-        if (!empty($validated['gender'])) {
+        if (! empty($validated['gender'])) {
             $query->where('gender', $validated['gender']);
         }
 
-        if (!empty($validated['age_min'])) {
+        if (! empty($validated['age_min'])) {
             $query->whereDate('date_of_birth', '<=', now()->subYears($validated['age_min'])->toDateString());
         }
 
-        if (!empty($validated['age_max'])) {
+        if (! empty($validated['age_max'])) {
             $query->whereDate('date_of_birth', '>=', now()->subYears($validated['age_max'] + 1)->toDateString());
         }
 

@@ -36,7 +36,7 @@ class NotificationService
 
     public function notifyApplicationStatus($creator, $campaign, string $status): void
     {
-        $this->send($creator, 'application_' . $status, [
+        $this->send($creator, 'application_'.$status, [
             'message' => "Your application to \"{$campaign->title}\" was {$status}",
             'campaign_id' => $campaign->id,
         ]);
@@ -119,7 +119,7 @@ class NotificationService
 
     public function notifySettlementProcessed($creator, $request, string $status): void
     {
-        $this->send($creator, 'settlement_' . $status, [
+        $this->send($creator, 'settlement_'.$status, [
             'message' => "Your settlement request of \${$request->amount} was {$status}",
             'amount' => $request->amount,
             'admin_notes' => $request->admin_notes,

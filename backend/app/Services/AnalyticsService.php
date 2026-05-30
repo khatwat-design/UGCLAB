@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Campaign;
-use App\Models\Payment;
 use App\Models\CampaignApplication;
-use Illuminate\Support\Facades\DB;
+use App\Models\Payment;
+use App\Models\User;
 
 class AnalyticsService
 {

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
+use App\Models\Media;
 use App\Models\PortfolioItem;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class PortfolioController extends Controller
 {
@@ -27,10 +28,10 @@ class PortfolioController extends Controller
         $maxSort = $request->user()->portfolioItems()->max('sort_order') ?? 0;
 
         if ($validated['media_id'] ?? null) {
-            $media = \App\Models\Media::find($validated['media_id']);
+            $media = Media::find($validated['media_id']);
             $validated['image_url'] = $media->url;
             $validated['is_video'] = str_starts_with($media->mime_type, 'video/');
-            $media->update(['model_type' => \App\Models\PortfolioItem::class]);
+            $media->update(['model_type' => PortfolioItem::class]);
         }
 
         $item = $request->user()->portfolioItems()->create([
@@ -39,7 +40,7 @@ class PortfolioController extends Controller
         ]);
 
         if ($validated['media_id'] ?? null) {
-            \App\Models\Media::where('id', $validated['media_id'])->update(['model_id' => $item->id]);
+            Media::where('id', $validated['media_id'])->update(['model_id' => $item->id]);
         }
 
         return response()->json($item, 201);
@@ -62,10 +63,10 @@ class PortfolioController extends Controller
         ]);
 
         if ($validated['media_id'] ?? null) {
-            $media = \App\Models\Media::find($validated['media_id']);
+            $media = Media::find($validated['media_id']);
             $validated['image_url'] = $media->url;
             $validated['is_video'] = str_starts_with($media->mime_type, 'video/');
-            $media->update(['model_type' => \App\Models\PortfolioItem::class, 'model_id' => $portfolioItem->id]);
+            $media->update(['model_type' => PortfolioItem::class, 'model_id' => $portfolioItem->id]);
         }
 
         $portfolioItem->update($validated);

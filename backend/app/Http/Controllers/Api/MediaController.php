@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Media;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 
 class MediaController extends Controller
@@ -44,7 +44,7 @@ class MediaController extends Controller
 
     public function delete(Media $medium)
     {
-        if ($medium->user_id !== request()->user()->id && !request()->user()->isAdmin()) {
+        if ($medium->user_id !== request()->user()->id && ! request()->user()->isAdmin()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

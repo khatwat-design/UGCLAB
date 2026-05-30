@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use App\Models\KycDocument;
+use App\Http\Controllers\Controller;
 use App\Models\AdminLog;
+use App\Models\KycDocument;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
 
 class KycController extends Controller
 {
@@ -24,9 +23,9 @@ class KycController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $path = storage_path('app/private/' . $document->file_path);
+        $path = storage_path('app/private/'.$document->file_path);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return response()->json(['message' => 'File not found'], 404);
         }
 
@@ -43,9 +42,9 @@ class KycController extends Controller
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
 
-        $directory = 'kyc-documents/' . $request->user()->id;
-        $storagePath = storage_path('app/private/' . $directory);
-        if (!file_exists($storagePath)) {
+        $directory = 'kyc-documents/'.$request->user()->id;
+        $storagePath = storage_path('app/private/'.$directory);
+        if (! file_exists($storagePath)) {
             mkdir($storagePath, 0755, true);
         }
 
@@ -106,7 +105,7 @@ class KycController extends Controller
             } elseif ($user->isAdvertiser()) {
                 $user->advertiserProfile()->update(['is_verified' => true]);
             }
-        } elseif (!$hasPendingOrRejected) {
+        } elseif (! $hasPendingOrRejected) {
             $user->update(['kyc_status' => 'verified']);
             if ($user->isCreator()) {
                 $user->creatorProfile()->update(['is_verified' => true]);
@@ -129,16 +128,17 @@ class KycController extends Controller
         try {
             $this->notificationService->send(
                 $user,
-                'kyc_' . $validated['status'],
+                'kyc_'.$validated['status'],
                 [
                     'message' => $validated['status'] === 'approved'
                         ? 'تم توثيق حسابك بنجاح'
-                        : 'لم يتم توثيق حسابك' . ($validated['admin_notes'] ? ': ' . $validated['admin_notes'] : ''),
+                        : 'لم يتم توثيق حسابك'.($validated['admin_notes'] ? ': '.$validated['admin_notes'] : ''),
                     'document_type' => $document->document_type,
                     'admin_notes' => $validated['admin_notes'] ?? null,
                 ]
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($document->fresh());
     }
@@ -147,7 +147,7 @@ class KycController extends Controller
     {
         $query = User::where('kyc_status', 'pending')
             ->orWhere(function ($q) {
-                $q->whereHas('kycDocuments', fn($qq) => $qq->where('status', 'pending'));
+                $q->whereHas('kycDocuments', fn ($qq) => $qq->where('status', 'pending'));
             })
             ->with(['kycDocuments', 'creatorProfile', 'advertiserProfile'])
             ->latest();
@@ -171,7 +171,7 @@ class KycController extends Controller
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
+                    ->orWhere('email', 'like', "%{$request->search}%");
             });
         }
 

@@ -10,12 +10,12 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user() || !$request->user()->is_active) {
+        if (! $request->user() || ! $request->user()->is_active) {
             return response()->json(['message' => 'Account is disabled'], 403);
         }
 
-        if (!in_array($request->user()->role, $roles)) {
-            return response()->json(['message' => 'Unauthorized. Required role: ' . implode(', ', $roles)], 403);
+        if (! in_array($request->user()->role, $roles)) {
+            return response()->json(['message' => 'Unauthorized. Required role: '.implode(', ', $roles)], 403);
         }
 
         return $next($request);

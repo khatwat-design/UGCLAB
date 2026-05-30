@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Enums\UserRole;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -67,7 +69,7 @@ class AuthController extends Controller
             ]);
         } else {
             $user->advertiserProfile()->create([
-                'company_name' => $validated['company_name'] ?? $validated['name'] . '\'s Company',
+                'company_name' => $validated['company_name'] ?? $validated['name'].'\'s Company',
                 'industry' => $validated['industry'] ?? null,
                 'company_website' => $validated['company_website'] ?? null,
             ]);
@@ -92,11 +94,11 @@ class AuthController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return response()->json(['message' => 'Account is deactivated'], 403);
         }
 
@@ -133,7 +135,7 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['sometimes', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['sometimes', 'string', 'max:20'],
             'bio' => ['sometimes', 'string', 'max:1000'],
             'avatar' => ['sometimes', 'string', 'max:2048'],
@@ -171,7 +173,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             return response()->json(['message' => 'Current password is incorrect'], 422);
         }
 
@@ -206,13 +208,13 @@ class AuthController extends Controller
         ]);
 
         // Generate a simple reset token (in production, send via email)
-        $token = \Illuminate\Support\Str::random(60);
+        $token = Str::random(60);
 
         // Store token in password_resets table (or cache)
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        DB::table('password_reset_tokens')
             ->updateOrInsert(
                 ['email' => $validated['email']],
-                ['token' => \Illuminate\Support\Facades\Hash::make($token), 'created_at' => now()]
+                ['token' => Hash::make($token), 'created_at' => now()]
             );
 
         // In production, send this token via email
@@ -228,27 +230,27 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'string', 'email', 'exists:users,email'],
             'token' => ['required', 'string'],
-            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        $record = DB::table('password_reset_tokens')
             ->where('email', $validated['email'])
             ->first();
 
-        if (!$record || !\Illuminate\Support\Facades\Hash::check($validated['token'], $record->token)) {
+        if (! $record || ! Hash::check($validated['token'], $record->token)) {
             return response()->json(['message' => 'Invalid or expired reset token'], 422);
         }
 
         // Token valid for 60 minutes
-        if (\Carbon\Carbon::parse($record->created_at)->addMinutes(60)->isPast()) {
+        if (Carbon::parse($record->created_at)->addMinutes(60)->isPast()) {
             return response()->json(['message' => 'Reset token has expired'], 422);
         }
 
         $user = User::where('email', $validated['email'])->first();
-        $user->update(['password' => \Illuminate\Support\Facades\Hash::make($validated['password'])]);
+        $user->update(['password' => Hash::make($validated['password'])]);
 
         // Delete used token
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        DB::table('password_reset_tokens')
             ->where('email', $validated['email'])
             ->delete();
 

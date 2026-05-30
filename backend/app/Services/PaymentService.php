@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Models\Payment;
-use App\Models\Wallet;
-use App\Enums\PaymentStatus;
 
 class PaymentService
 {

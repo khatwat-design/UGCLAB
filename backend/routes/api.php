@@ -1,19 +1,21 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdvertiserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CreatorController;
-use App\Http\Controllers\Api\AdvertiserController;
-use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\KycController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\KycController;
 use App\Http\Controllers\Api\PortfolioController;
-use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\ReviewController;
-use App\Models\SettlementRequest;
+use App\Models\Campaign;
+use App\Models\CampaignApplication;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 // Public routes (with rate limiting)
 Route::post('/auth/login', [AuthController::class, 'login'])
@@ -28,7 +30,7 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])
 
 // Public explore endpoint — no auth required
 Route::get('/campaigns/explore', function () {
-    return \App\Models\Campaign::where('status', 'open')
+    return Campaign::where('status', 'open')
         ->select(['id', 'title', 'description', 'budget', 'category', 'created_at'])
         ->with('advertiser:id,name')
         ->latest()
@@ -99,15 +101,16 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Shared routes (both creator & advertiser)
     Route::get('/creators', [CreatorController::class, 'discoverCreators']);
-    Route::get('/creators/{user}', function (\App\Models\User $user) {
-        if (!in_array($user->role, ['creator', 'advertiser'])) {
+    Route::get('/creators/{user}', function (User $user) {
+        if (! in_array($user->role, ['creator', 'advertiser'])) {
             return response()->json(['message' => 'Not found'], 404);
         }
         $user->load(['creatorProfile', 'advertiserProfile', 'portfolioItems']);
-        $user->completed_campaigns = \App\Models\CampaignApplication::where('creator_id', $user->id)
+        $user->completed_campaigns = CampaignApplication::where('creator_id', $user->id)
             ->where('status', 'completed')
             ->with('campaign')
             ->get();
+
         return $user;
     });
 

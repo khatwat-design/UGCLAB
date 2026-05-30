@@ -2,16 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\CreatorProfile;
+use App\Enums\ApplicationStatus;
 use App\Models\AdvertiserProfile;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
-use App\Models\Wallet;
+use App\Models\CreatorProfile;
 use App\Models\Message;
-use App\Enums\UserRole;
-use App\Enums\CampaignStatus;
-use App\Enums\ApplicationStatus;
+use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -39,7 +37,7 @@ class DatabaseSeeder extends Seeder
         foreach ($creatorNames as $data) {
             $user = User::factory()->create([
                 'name' => $data['name'],
-                'email' => strtolower(str_replace(' ', '.', $data['name'])) . '@ugclab.com',
+                'email' => strtolower(str_replace(' ', '.', $data['name'])).'@ugclab.com',
                 'role' => 'creator',
                 'bio' => "مبدع محتوى في مجال {$data['category']}",
             ]);
@@ -67,7 +65,7 @@ class DatabaseSeeder extends Seeder
         foreach ($advertiserNames as $data) {
             $user = User::factory()->create([
                 'name' => $data['name'],
-                'email' => strtolower(str_replace(' ', '_', $data['company'])) . '@ugclab.com',
+                'email' => strtolower(str_replace(' ', '_', $data['company'])).'@ugclab.com',
                 'role' => 'advertiser',
             ]);
             AdvertiserProfile::create([
@@ -93,7 +91,7 @@ class DatabaseSeeder extends Seeder
                 'advertiser_id' => $advertisers[$i % count($advertisers)]->id,
                 'title' => $data['title'],
                 'description' => "نبحث عن مبدعين مبدعين للترويج لـ {$data['title']} عبر منصات التواصل الاجتماعي.",
-                'brief' => "نحتاج إلى محتوى إبداعي يعكس قيم العلامة التجارية ويصل إلى الجمهور المستهدف.",
+                'brief' => 'نحتاج إلى محتوى إبداعي يعكس قيم العلامة التجارية ويصل إلى الجمهور المستهدف.',
                 'budget' => $data['budget'],
                 'status' => 'open',
                 'category' => $data['category'],
@@ -108,7 +106,7 @@ class DatabaseSeeder extends Seeder
                 CampaignApplication::create([
                     'campaign_id' => $campaign->id,
                     'creator_id' => $creators[$i]->id,
-                    'proposal' => "لدي خبرة واسعة في هذا المجال ويمكنني تقديم محتوى مميز يصل إلى آلاف المتابعين.",
+                    'proposal' => 'لدي خبرة واسعة في هذا المجال ويمكنني تقديم محتوى مميز يصل إلى آلاف المتابعين.',
                     'proposed_rate' => $data['budget'] * 0.8,
                     'status' => ApplicationStatus::Pending->value,
                 ]);

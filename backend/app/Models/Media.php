@@ -29,6 +29,6 @@ class Media extends Model
 
     public function getUrlAttribute(): string
     {
-        return url('storage/' . $this->file_path);
+        return url('storage/'.$this->file_path);
     }
 }

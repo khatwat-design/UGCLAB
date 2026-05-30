@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Payment;
-use App\Models\Wallet;
-use App\Models\DepositRequest;
-use App\Http\Resources\DepositRequestResource;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\DepositRequestResource;
+use App\Models\DepositRequest;
+use App\Models\Wallet;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class PaymentController extends Controller
 {

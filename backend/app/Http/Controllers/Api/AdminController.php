@@ -2,21 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use App\Models\Campaign;
-use App\Models\Payment;
-use App\Models\Wallet;
-use App\Models\AdminLog;
-use App\Models\DepositRequest;
-use App\Models\CampaignApplication;
-use App\Models\SettlementRequest;
+use App\Http\Controllers\Controller;
 use App\Http\Resources\DepositRequestResource;
-use App\Enums\UserRole;
-use App\Enums\CampaignStatus;
-use App\Enums\PaymentStatus;
+use App\Models\AdminLog;
+use App\Models\Campaign;
+use App\Models\CreatorProfile;
+use App\Models\DepositRequest;
+use App\Models\Payment;
+use App\Models\SettlementRequest;
+use App\Models\User;
+use App\Models\Wallet;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
@@ -24,6 +21,7 @@ class AdminController extends Controller
     public function __construct(
         private NotificationService $notificationService
     ) {}
+
     public function dashboard()
     {
         return response()->json([
@@ -51,7 +49,7 @@ class AdminController extends Controller
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
+                    ->orWhere('email', 'like', "%{$request->search}%");
             });
         }
 
@@ -143,7 +141,7 @@ class AdminController extends Controller
 
             $wallet = $payment->creator->wallet;
             if ($wallet) {
-                $lockedWallet = \App\Models\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
+                $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
                 $netAmount = $lockedPayment->amount - $lockedPayment->platform_fee;
                 $lockedWallet->increment('balance', $netAmount);
                 $lockedWallet->transactions()->create([
@@ -170,7 +168,8 @@ class AdminController extends Controller
                 $payment->campaign,
                 $payment->amount - $payment->platform_fee
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($payment->fresh());
     }
@@ -187,7 +186,7 @@ class AdminController extends Controller
 
             $wallet = $payment->advertiser->wallet;
             if ($wallet) {
-                $lockedWallet = \App\Models\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
+                $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
                 $lockedWallet->increment('balance', $lockedPayment->amount);
                 $lockedWallet->transactions()->create([
                     'amount' => $lockedPayment->amount,
@@ -277,7 +276,8 @@ class AdminController extends Controller
                 $settlementRequest,
                 $newStatus
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json($settlementRequest->fresh());
     }
@@ -295,15 +295,15 @@ class AdminController extends Controller
             'payments_held' => Payment::where('status', 'held')->sum('amount'),
             'payments_released' => Payment::where('status', 'released')->sum('amount'),
             'pending_kyc' => User::where('kyc_status', 'pending')->count(),
-            'total_wallet_balance' => \App\Models\Wallet::sum('balance'),
-            'total_wallet_pending' => \App\Models\Wallet::sum('pending_balance'),
-            'pending_deposits' => \App\Models\DepositRequest::where('status', 'pending')->count(),
-            'pending_settlements' => \App\Models\SettlementRequest::where('status', 'pending')->count(),
+            'total_wallet_balance' => Wallet::sum('balance'),
+            'total_wallet_pending' => Wallet::sum('pending_balance'),
+            'pending_deposits' => DepositRequest::where('status', 'pending')->count(),
+            'pending_settlements' => SettlementRequest::where('status', 'pending')->count(),
         ];
 
         // ── Gender distribution by role ──
         $genderStats = User::whereNotNull('gender')
-            ->selectRaw("gender, role, COUNT(*) as count")
+            ->selectRaw('gender, role, COUNT(*) as count')
             ->groupBy('gender', 'role')
             ->get();
 
@@ -319,8 +319,8 @@ class AdminController extends Controller
         $ageStats = [];
         foreach ($ageRanges as $label => $range) {
             $count = User::whereNotNull('date_of_birth')
-                ->whereRaw("TIMESTAMPDIFF(YEAR, date_of_birth, ?) >= ?", [$now, $range['min']])
-                ->whereRaw("TIMESTAMPDIFF(YEAR, date_of_birth, ?) <= ?", [$now, $range['max']])
+                ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) >= ?', [$now, $range['min']])
+                ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) <= ?', [$now, $range['max']])
                 ->count();
             $ageStats[$label] = $count;
         }
@@ -328,7 +328,7 @@ class AdminController extends Controller
         // ── Campaign demographics ──
         $campaignDemographics = [
             'target_gender' => Campaign::whereNotNull('target_gender')
-                ->selectRaw("target_gender, COUNT(*) as count")
+                ->selectRaw('target_gender, COUNT(*) as count')
                 ->groupBy('target_gender')
                 ->pluck('count', 'target_gender'),
             'avg_age_min' => Campaign::whereNotNull('target_age_min')->avg('target_age_min'),
@@ -341,8 +341,8 @@ class AdminController extends Controller
         ];
 
         // ── Creator category distribution ──
-        $categoryStats = \App\Models\CreatorProfile::whereNotNull('category')
-            ->selectRaw("category, COUNT(*) as count")
+        $categoryStats = CreatorProfile::whereNotNull('category')
+            ->selectRaw('category, COUNT(*) as count')
             ->groupBy('category')
             ->orderByDesc('count')
             ->get();
@@ -370,7 +370,7 @@ class AdminController extends Controller
             ->pluck('total', 'month');
 
         // ── Campaign status breakdown ──
-        $campaignStatusStats = Campaign::selectRaw("status, COUNT(*) as count")
+        $campaignStatusStats = Campaign::selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->orderByDesc('count')
             ->get();
@@ -459,15 +459,16 @@ class AdminController extends Controller
         try {
             $this->notificationService->send(
                 $depositRequest->user,
-                'deposit_' . $newStatus,
+                'deposit_'.$newStatus,
                 [
                     'message' => $validated['action'] === 'approve'
                         ? "تم قبول طلب الإيداع بمبلغ {$depositRequest->amount} دولار وتم إضافة الرصيد إلى محفظتك"
-                        : "تم رفض طلب الإيداع بمبلغ {$depositRequest->amount} دولار" . ($validated['admin_notes'] ? "، السبب: {$validated['admin_notes']}" : ''),
+                        : "تم رفض طلب الإيداع بمبلغ {$depositRequest->amount} دولار".($validated['admin_notes'] ? "، السبب: {$validated['admin_notes']}" : ''),
                     'amount' => $depositRequest->amount,
                 ]
             );
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return response()->json(new DepositRequestResource($depositRequest->fresh()));
     }

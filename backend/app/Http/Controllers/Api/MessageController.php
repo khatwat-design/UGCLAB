@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use App\Models\Message;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Message;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
@@ -31,7 +31,9 @@ class MessageController extends Controller
                 $q->where('sender_id', $partnerId)->where('receiver_id', $userId);
             })->with(['sender', 'receiver'])->latest()->first();
 
-            if (!$lastMessage) continue;
+            if (! $lastMessage) {
+                continue;
+            }
 
             $unread = Message::where('sender_id', $partnerId)
                 ->where('receiver_id', $userId)
@@ -50,7 +52,7 @@ class MessageController extends Controller
         }
 
         // Sort by last message time, most recent first
-        usort($result, fn($a, $b) => strtotime($b['last_message']->created_at) - strtotime($a['last_message']->created_at));
+        usort($result, fn ($a, $b) => strtotime($b['last_message']->created_at) - strtotime($a['last_message']->created_at));
 
         return response()->json($result);
     }
@@ -64,8 +66,8 @@ class MessageController extends Controller
         })->orWhere(function ($q) use ($userId, $user) {
             $q->where('sender_id', $user->id)->where('receiver_id', $userId);
         })->with(['sender', 'receiver'])
-          ->oldest()
-          ->get();
+            ->oldest()
+            ->get();
 
         Message::where('sender_id', $user->id)
             ->where('receiver_id', $userId)
