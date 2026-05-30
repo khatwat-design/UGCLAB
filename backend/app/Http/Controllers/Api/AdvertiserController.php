@@ -58,6 +58,10 @@ class AdvertiserController extends Controller
             'start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'max_creators' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'target_gender' => ['nullable', 'string', 'in:male,female,any'],
+            'target_age_min' => ['nullable', 'integer', 'min:13', 'max:100'],
+            'target_age_max' => ['nullable', 'integer', 'min:13', 'max:100'],
+            'videos_per_creator' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $user = auth()->user();

@@ -19,6 +19,8 @@ class User extends Authenticatable
         'avatar',
         'phone',
         'bio',
+        'gender',
+        'date_of_birth',
         'is_active',
         'kyc_status',
         'notification_preferences',

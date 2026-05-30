@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import Badge from '@/components/shared/Badge';
 import { formatDate } from '@/lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Upload, FileText, Package, Truck, Check } from 'lucide-react';
 import { AppListSkeleton } from '@/components/shared/Skeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -22,6 +23,7 @@ export default function CreatorApplications() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mediaId, setMediaId] = useState<number | null>(null);
+  const [directFile, setDirectFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchApplications = (p: number) => {
@@ -37,42 +39,41 @@ export default function CreatorApplications() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('collection', 'deliverable');
-      const res = await api.post('/media/upload', formData);
-      const media = res.data;
-      setMediaId(media.id);
-      setContentUrl(media.url);
-      setContentType(media.is_video ? 'video' : file.type.startsWith('image/') ? 'image' : 'file');
-      toast.success('تم رفع الملف');
-    } catch {
-      toast.error('فشل رفع الملف');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setDirectFile(file);
+    const isVideo = file.type.startsWith('video/');
+    setContentType(isVideo ? 'video' : file.type.startsWith('image/') ? 'image' : 'file');
+    toast.success('تم اختيار الملف');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const submitDeliverable = async (appId: number) => {
-    if ((!contentUrl.trim() || !contentType.trim()) && !mediaId) return;
+    if (!directFile && (!contentUrl.trim() || !contentType.trim()) && !mediaId) return;
     setSubmitting(true);
     try {
-      const payload: any = { content_type: contentType, notes };
-      if (mediaId) {
-        payload.media_id = mediaId;
+      const formData = new FormData();
+      if (directFile) {
+        formData.append('file', directFile);
+        formData.append('content_type', contentType || 'file');
+        formData.append('notes', notes || '');
       } else {
-        payload.content_url = contentUrl;
+        formData.append('content_type', contentType);
+        formData.append('notes', notes || '');
+        if (mediaId) {
+          formData.append('media_id', String(mediaId));
+        } else {
+          formData.append('content_url', contentUrl);
+        }
       }
-      await api.post(`/creator/deliverables/${appId}`, payload);
+      await api.post(`/creator/deliverables/${appId}`, formData, {
+        headers: directFile ? { 'Content-Type': 'multipart/form-data' } : undefined,
+      });
       toast.success('تم تسليم المحتوى بنجاح');
       setShowModal(false);
       setContentUrl('');
       setContentType('');
       setNotes('');
       setMediaId(null);
+      setDirectFile(null);
       fetchApplications(page);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'حدث خطأ');
@@ -186,6 +187,12 @@ export default function CreatorApplications() {
                       })()}
                     </div>
                     <Badge status={app.status} />
+                    <Link
+                      href={`/creator/applications/${app.id}`}
+                      className="text-[11px] text-gray-400 hover:text-black underline underline-offset-2"
+                    >
+                      تفاصيل
+                    </Link>
                     {(app.status === 'accepted' || app.status === 'revision_requested') && (
                       <>
                         <button
@@ -275,6 +282,20 @@ export default function CreatorApplications() {
                 <div className="flex flex-col items-center gap-2">
                   <LoadingSpinner className="h-8 w-auto" />
                   <span className="text-xs text-gray-400">جاري الرفع...</span>
+                </div>
+              ) : directFile ? (
+                <div className="relative">
+                  <div className="flex items-center gap-2 justify-center">
+                    <FileText className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-gray-600">{directFile.name}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">سيتم الرفع مع التسليم (خطوة واحدة)</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDirectFile(null); setContentType(''); }}
+                    className="mt-2 text-xs text-red-500 hover:text-red-700"
+                  >
+                    تغيير الملف
+                  </button>
                 </div>
               ) : contentUrl ? (
                 <div className="relative">

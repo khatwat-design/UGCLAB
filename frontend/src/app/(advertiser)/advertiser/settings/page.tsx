@@ -23,6 +23,9 @@ export default function AdvertiserSettings() {
   const [showPassword, setShowPassword] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -46,6 +49,8 @@ export default function AdvertiserSettings() {
 
   useEffect(() => {
     if (user) {
+      setGender((user as any).gender || '');
+      setDateOfBirth((user as any).date_of_birth || '');
       setProfile({
         name: user.name || '',
         email: user.email || '',
@@ -63,7 +68,7 @@ export default function AdvertiserSettings() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.put('/auth/profile', profile);
+      const res = await api.put('/auth/profile', { ...profile, gender: gender || undefined, date_of_birth: dateOfBirth || undefined });
       setUser(res.data.user || res.data);
       toast.success('تم تحديث الملف الشخصي');
     } catch {
@@ -249,6 +254,18 @@ export default function AdvertiserSettings() {
                   className="input-field"
                   placeholder="اسم شركتك أو علامتك التجارية"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">الجنس</label>
+                <select value={gender} onChange={(e) => setGender(e.target.value)} className="input-field">
+                  <option value="">اختر الجنس</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">تاريخ الميلاد</label>
+                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="input-field" />
               </div>
             </div>
             <div>

@@ -49,10 +49,28 @@ class CreatorController extends Controller
 
     public function availableCampaigns()
     {
-        $appliedIds = auth()->user()->applications()->pluck('campaign_id');
+        $user = auth()->user();
+        $appliedIds = $user->applications()->pluck('campaign_id');
 
         return Campaign::where('status', 'open')
             ->whereNotIn('id', $appliedIds)
+            ->when($user->gender, function ($q) {
+                $q->where(function ($q) use ($user) {
+                    $q->whereNull('target_gender')
+                      ->orWhere('target_gender', 'any')
+                      ->orWhere('target_gender', $user->gender);
+                });
+            })
+            ->when($user->date_of_birth, function ($q) use ($user) {
+                $age = now()->diffInYears($user->date_of_birth);
+                $q->where(function ($q) use ($age) {
+                    $q->whereNull('target_age_min')
+                      ->orWhere('target_age_min', '<=', $age);
+                })->where(function ($q) use ($age) {
+                    $q->whereNull('target_age_max')
+                      ->orWhere('target_age_max', '>=', $age);
+                });
+            })
             ->with('advertiser')
             ->latest()
             ->paginate(12);
@@ -103,6 +121,20 @@ class CreatorController extends Controller
             ->paginate(12);
     }
 
+    public function myApplication(CampaignApplication $application)
+    {
+        if ($application->creator_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json(
+            $application->load([
+                'campaign.advertiser',
+                'deliverables' => fn($q) => $q->latest(),
+            ])
+        );
+    }
+
     public function submitDeliverable(Request $request, CampaignApplication $application)
     {
         if ($application->creator_id !== auth()->id()) {
@@ -118,9 +150,27 @@ class CreatorController extends Controller
             'content_type' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'media_id' => ['nullable', 'exists:media,id'],
+            'file' => ['nullable', 'file', 'max:102400', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,avi,webm,pdf'],
         ]);
 
         $contentUrl = $validated['content_url'] ?? null;
+
+        // Direct file upload (faster one-step)
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store("uploads/deliverable/{$application->id}", 'public');
+            $media = \App\Models\Media::create([
+                'user_id' => auth()->id(),
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'collection' => 'deliverable',
+                'model_type' => \App\Models\Deliverable::class,
+            ]);
+            $contentUrl = $media->url;
+        }
+
         if ($validated['media_id'] ?? null) {
             $media = \App\Models\Media::find($validated['media_id']);
             $contentUrl = $media->url;
@@ -301,6 +351,9 @@ class CreatorController extends Controller
             'category' => ['nullable', 'string'],
             'min_followers' => ['nullable', 'integer', 'min:0'],
             'search' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'in:male,female'],
+            'age_min' => ['nullable', 'integer', 'min:13', 'max:100'],
+            'age_max' => ['nullable', 'integer', 'min:13', 'max:100'],
         ]);
 
         $query = User::where('role', 'creator')->where('is_active', true)
@@ -316,6 +369,18 @@ class CreatorController extends Controller
 
         if (!empty($validated['search'])) {
             $query->where('name', 'like', '%' . $validated['search'] . '%');
+        }
+
+        if (!empty($validated['gender'])) {
+            $query->where('gender', $validated['gender']);
+        }
+
+        if (!empty($validated['age_min'])) {
+            $query->whereDate('date_of_birth', '<=', now()->subYears($validated['age_min'])->toDateString());
+        }
+
+        if (!empty($validated['age_max'])) {
+            $query->whereDate('date_of_birth', '>=', now()->subYears($validated['age_max'] + 1)->toDateString());
         }
 
         return $query->paginate(20);

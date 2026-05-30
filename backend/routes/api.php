@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/campaigns', [CreatorController::class, 'availableCampaigns']);
         Route::post('/campaigns/{campaign}/apply', [CreatorController::class, 'apply']);
         Route::get('/applications', [CreatorController::class, 'myApplications']);
+        Route::get('/applications/{application}', [CreatorController::class, 'myApplication']);
         Route::post('/deliverables/{application}', [CreatorController::class, 'submitDeliverable']);
         Route::post('/applications/{application}/mark-received', [CreatorController::class, 'markReceived']);
         Route::get('/settlement-requests', [CreatorController::class, 'settlementRequests']);
@@ -157,6 +158,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Admin routes
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        Route::get('/analytics', [AdminController::class, 'analytics']);
         Route::get('/users', [AdminController::class, 'users']);
         Route::put('/users/{user}', [AdminController::class, 'updateUser']);
         Route::get('/campaigns', [AdminController::class, 'campaigns']);

@@ -22,6 +22,8 @@ export default function CreatorSettings() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [bio, setBio] = useState('');
   const [category, setCategory] = useState('');
   const [platforms, setPlatforms] = useState<string[]>([]);
@@ -53,6 +55,8 @@ export default function CreatorSettings() {
       const u = r.data;
       setName(u.name || '');
       setEmail(u.email || '');
+      setGender(u.gender || '');
+      setDateOfBirth(u.date_of_birth || '');
       setBio(u.creator_profile?.bio || '');
       setCategory(u.creator_profile?.category || '');
       setPlatforms(u.creator_profile?.platforms || []);
@@ -73,7 +77,7 @@ export default function CreatorSettings() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      await api.put('/auth/profile', { name, email });
+      await api.put('/auth/profile', { name, email, gender, date_of_birth: dateOfBirth || undefined });
       await api.put('/creator/profile', { category, platforms, followers_count: followersCount, engagement_rate: engagementRate, address, city, state: stateField, country: 'IQ' });
       toast.success('تم حفظ التغييرات');
     } catch (err: any) {
@@ -241,6 +245,18 @@ export default function CreatorSettings() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">الجنس</label>
+                <select value={gender} onChange={(e) => setGender(e.target.value)} className="input-field">
+                  <option value="">اختر الجنس</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">تاريخ الميلاد</label>
+                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="input-field" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">التصنيف</label>

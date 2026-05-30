@@ -57,6 +57,10 @@ export default function AdvertiserCampaigns() {
         budget: campaign.budget,
         category: campaign.category || '',
         max_creators: campaign.max_creators || 1,
+        target_gender: campaign.target_gender || undefined,
+        target_age_min: campaign.target_age_min || undefined,
+        target_age_max: campaign.target_age_max || undefined,
+        videos_per_creator: campaign.videos_per_creator || 1,
       });
       toast.success('تم نسخ الحملة بنجاح');
       setCampaigns((prev) => [res.data, ...prev]);

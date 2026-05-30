@@ -21,6 +21,8 @@ class AuthController extends Controller
             'role' => ['required', 'string', 'in:creator,advertiser'],
             'phone' => ['required', 'string', 'max:20'],
             'bio' => ['nullable', 'string', 'max:1000'],
+            'gender' => ['nullable', 'string', 'in:male,female'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
             'category' => ['nullable', 'string', 'max:255'],
             'platforms' => ['nullable', 'array'],
             'platforms.*' => ['string'],
@@ -44,6 +46,8 @@ class AuthController extends Controller
             'role' => $validated['role'],
             'phone' => $validated['phone'] ?? null,
             'bio' => $validated['bio'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
         ]);
 
         Wallet::create(['user_id' => $user->id]);
@@ -133,6 +137,8 @@ class AuthController extends Controller
             'phone' => ['sometimes', 'string', 'max:20'],
             'bio' => ['sometimes', 'string', 'max:1000'],
             'avatar' => ['sometimes', 'string', 'max:2048'],
+            'gender' => ['sometimes', 'string', 'in:male,female'],
+            'date_of_birth' => ['sometimes', 'date', 'before:today'],
             'company_name' => ['sometimes', 'string', 'max:255'],
         ]);
 
@@ -141,6 +147,8 @@ class AuthController extends Controller
             'email' => $validated['email'] ?? $user->email,
             'phone' => $validated['phone'] ?? $user->phone,
             'bio' => $validated['bio'] ?? $user->bio,
+            'gender' => $validated['gender'] ?? $user->gender,
+            'date_of_birth' => $validated['date_of_birth'] ?? $user->date_of_birth,
         ]);
 
         // Update advertiser profile if applicable

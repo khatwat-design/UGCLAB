@@ -23,6 +23,9 @@ export default function DiscoverCreators() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [ageMinFilter, setAgeMinFilter] = useState('');
+  const [ageMaxFilter, setAgeMaxFilter] = useState('');
   const [sortBy, setSortBy] = useState('followers');
   const [inviting, setInviting] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<number[]>([]);
@@ -32,15 +35,36 @@ export default function DiscoverCreators() {
     api.get('/creators').then((r) => setCreators(r.data.data || [])).finally(() => setLoading(false));
   }, []);
 
+  const calcAge = (dob: string) => {
+    if (!dob) return null;
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  };
+
   const filtered = creators
     .filter((c: any) => {
-      const profile = c.creator_profile || {};
       if (!search) return true;
+      const profile = c.creator_profile || {};
       return c.name.includes(search) || profile.category?.includes(search);
     })
     .filter((c: any) => {
       if (categoryFilter === 'الكل') return true;
       return c.creator_profile?.category === categoryFilter;
+    })
+    .filter((c: any) => {
+      if (!genderFilter) return true;
+      return c.gender === genderFilter;
+    })
+    .filter((c: any) => {
+      const age = calcAge(c.date_of_birth);
+      if (!age) return !ageMinFilter && !ageMaxFilter;
+      if (ageMinFilter && age < Number(ageMinFilter)) return false;
+      if (ageMaxFilter && age > Number(ageMaxFilter)) return false;
+      return true;
     })
     .sort((a: any, b: any) => {
       const pa = a.creator_profile || {};
@@ -114,6 +138,33 @@ export default function DiscoverCreators() {
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
+          <select
+            value={genderFilter}
+            onChange={(e) => setGenderFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white focus:border-black outline-none transition-colors"
+          >
+            <option value="">كل الجنسين</option>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
+          </select>
+          <input
+            type="number"
+            value={ageMinFilter}
+            onChange={(e) => setAgeMinFilter(e.target.value)}
+            placeholder="العمر من"
+            className="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white w-20 focus:border-black outline-none transition-colors"
+            min="13"
+            max="100"
+          />
+          <input
+            type="number"
+            value={ageMaxFilter}
+            onChange={(e) => setAgeMaxFilter(e.target.value)}
+            placeholder="العمر إلى"
+            className="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white w-20 focus:border-black outline-none transition-colors"
+            min="13"
+            max="100"
+          />
           <button
             onClick={() => setSortBy(sortBy === 'followers' ? 'engagement' : sortBy === 'engagement' ? 'name' : 'followers')}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-600 hover:border-gray-400 transition-all whitespace-nowrap"

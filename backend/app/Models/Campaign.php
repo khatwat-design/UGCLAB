@@ -21,6 +21,10 @@ class Campaign extends Model
         'start_date',
         'end_date',
         'max_creators',
+        'target_gender',
+        'target_age_min',
+        'target_age_max',
+        'videos_per_creator',
     ];
 
     protected function casts(): array
@@ -31,6 +35,9 @@ class Campaign extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'max_creators' => 'integer',
+            'target_age_min' => 'integer',
+            'target_age_max' => 'integer',
+            'videos_per_creator' => 'integer',
         ];
     }
 

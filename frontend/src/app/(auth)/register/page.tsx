@@ -45,6 +45,10 @@ function RegisterWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
 
+  // Demographics
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+
   // Creator fields
   const [category, setCategory] = useState('');
   const [platforms, setPlatforms] = useState<string[]>([]);
@@ -82,6 +86,8 @@ function RegisterWizard() {
     try {
       await register(name, email, password, passwordConfirmation, role, {
         phone: `${countryCode}${phone}`,
+        gender: gender || undefined,
+        date_of_birth: dateOfBirth || undefined,
         ...(role === 'creator' ? {
           category,
           platforms,
@@ -265,6 +271,20 @@ function RegisterWizard() {
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field" placeholder="your@email.com" dir="ltr" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">الجنس</label>
+                      <select value={gender} onChange={(e) => setGender(e.target.value)} className="input-field">
+                        <option value="">اختر الجنس</option>
+                        <option value="male">ذكر</option>
+                        <option value="female">أنثى</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">تاريخ الميلاد</label>
+                      <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="input-field" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">

@@ -16,6 +16,7 @@ import {
   Shield,
   ShieldCheck,
   Send,
+  TrendingUp,
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -50,6 +51,7 @@ const adminLinks: SidebarLink[] = [
   { href: '/admin/campaigns', label: 'الحملات', icon: <Megaphone className="w-5 h-5" /> },
   { href: '/admin/payments', label: 'المدفوعات', icon: <DollarSign className="w-5 h-5" /> },
   { href: '/admin/settlement-requests', label: 'طلبات التسوية', icon: <Send className="w-5 h-5" /> },
+  { href: '/admin/analytics', label: 'التحليلات', icon: <TrendingUp className="w-5 h-5" /> },
   { href: '/admin/logs', label: 'سجل النشاطات', icon: <FileText className="w-5 h-5" /> },
 ];
 

@@ -53,6 +53,10 @@ export default function NewCampaign() {
     budget: '',
     category: '',
     max_creators: 1,
+    target_gender: '',
+    target_age_min: '',
+    target_age_max: '',
+    videos_per_creator: 1,
     start_date: '',
     end_date: '',
   });
@@ -68,6 +72,10 @@ export default function NewCampaign() {
         ...form,
         budget: parseFloat(form.budget),
         max_creators: Number(form.max_creators),
+        videos_per_creator: Number(form.videos_per_creator),
+        target_age_min: form.target_age_min ? Number(form.target_age_min) : undefined,
+        target_age_max: form.target_age_max ? Number(form.target_age_max) : undefined,
+        target_gender: form.target_gender || undefined,
       });
       toast.success('تم إنشاء الحملة بنجاح');
       router.push(`/advertiser/campaigns/${res.data.id}`);
@@ -243,6 +251,60 @@ export default function NewCampaign() {
               />
             </div>
 
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <h3 className="text-sm font-bold text-black mb-3">الاستهداف الديموغرافي</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">الجنس المستهدف</label>
+                  <select
+                    value={form.target_gender}
+                    onChange={(e) => update('target_gender', e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">الكل</option>
+                    <option value="male">ذكر</option>
+                    <option value="female">أنثى</option>
+                    <option value="any">أي</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">الحد الأدنى للعمر</label>
+                  <input
+                    type="number"
+                    value={form.target_age_min}
+                    onChange={(e) => update('target_age_min', e.target.value)}
+                    className="input-field"
+                    placeholder="18"
+                    min="13"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">الحد الأقصى للعمر</label>
+                  <input
+                    type="number"
+                    value={form.target_age_max}
+                    onChange={(e) => update('target_age_max', e.target.value)}
+                    className="input-field"
+                    placeholder="35"
+                    min="13"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">عدد الفيديوهات لكل مبدع</label>
+                  <input
+                    type="number"
+                    value={form.videos_per_creator}
+                    onChange={(e) => update('videos_per_creator', parseInt(e.target.value))}
+                    className="input-field"
+                    min="1"
+                    max="50"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex justify-between pt-2">
               <button type="button" onClick={() => setStep(1)} className="btn-secondary">السابق</button>
               <button type="button" onClick={() => setStep(3)} className="btn-primary">التالي</button>
@@ -257,15 +319,18 @@ export default function NewCampaign() {
               <h3 className="font-bold text-black">مراجعة الحملة</h3>
             </div>
 
-            <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-400">العنوان:</span> <span className="text-black font-medium">{form.title}</span></div>
-                <div><span className="text-gray-400">الفئة:</span> <span className="text-black font-medium">{form.category || '—'}</span></div>
-                <div><span className="text-gray-400">الميزانية:</span> <span className="text-black font-medium">${form.budget}</span></div>
-                <div><span className="text-gray-400">المبدعون:</span> <span className="text-black font-medium">{form.max_creators}</span></div>
+              <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-gray-400">العنوان:</span> <span className="text-black font-medium">{form.title}</span></div>
+                  <div><span className="text-gray-400">الفئة:</span> <span className="text-black font-medium">{form.category || '—'}</span></div>
+                  <div><span className="text-gray-400">الميزانية:</span> <span className="text-black font-medium">${form.budget}</span></div>
+                  <div><span className="text-gray-400">المبدعون:</span> <span className="text-black font-medium">{form.max_creators}</span></div>
+                  <div><span className="text-gray-400">الجنس المستهدف:</span> <span className="text-black font-medium">{form.target_gender ? ({ male: 'ذكر', female: 'أنثى', any: 'أي' }[form.target_gender] || 'الكل') : 'الكل'}</span></div>
+                  <div><span className="text-gray-400">الفئة العمرية:</span> <span className="text-black font-medium">{form.target_age_min || form.target_age_max ? `${form.target_age_min || '—'} - ${form.target_age_max || '—'}` : 'الكل'}</span></div>
+                  <div><span className="text-gray-400">فيديوهات لكل مبدع:</span> <span className="text-black font-medium">{form.videos_per_creator}</span></div>
+                </div>
+                <p className="text-sm text-gray-600 pt-2 border-t border-gray-200">{form.description}</p>
               </div>
-              <p className="text-sm text-gray-600 pt-2 border-t border-gray-200">{form.description}</p>
-            </div>
 
             <div className="flex justify-between pt-2">
               <button type="button" onClick={() => setStep(2)} className="btn-secondary">السابق</button>
