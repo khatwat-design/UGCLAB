@@ -17,7 +17,8 @@ use App\Models\SettlementRequest;
 
 // Public routes (with rate limiting)
 Route::post('/auth/login', [AuthController::class, 'login'])
-    ->middleware('throttle:auth');
+    ->middleware('throttle:auth')
+    ->name('login');
 Route::post('/auth/register', [AuthController::class, 'register'])
     ->middleware('throttle:auth');
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
@@ -55,6 +56,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/settlement-requests', [CreatorController::class, 'requestSettlement']);
         Route::get('/earnings', [CreatorController::class, 'earnings']);
         Route::put('/profile', [CreatorController::class, 'updateProfile']);
+        Route::get('/payout-methods', [CreatorController::class, 'payoutMethods']);
+        Route::put('/payout-methods', [CreatorController::class, 'updatePayoutMethods']);
     });
 
     // Advertiser routes
@@ -128,6 +131,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/deposit', [PaymentController::class, 'deposit']);
         Route::post('/withdraw', [PaymentController::class, 'withdraw']);
         Route::get('/transactions', [PaymentController::class, 'transactions']);
+        Route::post('/deposit-requests', [PaymentController::class, 'submitDepositRequest']);
+        Route::get('/deposit-requests', [PaymentController::class, 'myDepositRequests']);
     });
 
     // Reviews
@@ -165,5 +170,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/kyc/pending', [KycController::class, 'pendingUsers']);
         Route::get('/kyc/users', [KycController::class, 'allUsers']);
         Route::post('/kyc/{document}/review', [KycController::class, 'review']);
+        Route::get('/deposit-requests', [AdminController::class, 'depositRequests']);
+        Route::post('/deposit-requests/{depositRequest}/review', [AdminController::class, 'reviewDeposit']);
     });
 });
