@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PortfolioController;
+use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
@@ -156,6 +157,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Wallet
     Route::get('/wallet', function (Request $request) {
         return $request->user()->wallet;
+    });
+
+    // Loyalty system (creator only)
+    Route::middleware('role:creator')->prefix('loyalty')->group(function () {
+        Route::get('/me', [LoyaltyController::class, 'me']);
+        Route::post('/daily-login', [LoyaltyController::class, 'dailyLogin']);
+        Route::get('/transactions', [LoyaltyController::class, 'transactions']);
+        Route::get('/rewards', [LoyaltyController::class, 'rewards']);
+        Route::post('/redeem', [LoyaltyController::class, 'redeem']);
+        Route::get('/redemptions', [LoyaltyController::class, 'redemptions']);
+        Route::get('/streak', [LoyaltyController::class, 'streak']);
     });
 
     // Admin routes

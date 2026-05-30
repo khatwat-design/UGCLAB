@@ -48,14 +48,35 @@ class CreatorController extends Controller
         ]);
     }
 
-    public function availableCampaigns()
+    public function availableCampaigns(Request $request)
     {
         $user = auth()->user();
         $appliedIds = $user->applications()->pluck('campaign_id');
 
-        return Campaign::where('status', 'open')
+        $validated = $request->validate([
+            'category' => ['nullable', 'string', 'max:255'],
+            'budget_min' => ['nullable', 'numeric', 'min:0'],
+            'budget_max' => ['nullable', 'numeric', 'min:0'],
+            'deadline_before' => ['nullable', 'date'],
+            'deadline_after' => ['nullable', 'date'],
+            'content_type' => ['nullable', 'string', 'max:255'],
+            'sort' => ['nullable', 'string', 'in:latest,highest_budget,deadline'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $sortField = match ($validated['sort'] ?? 'latest') {
+            'highest_budget' => 'budget',
+            'deadline' => 'end_date',
+            default => 'created_at',
+        };
+        $sortDir = ($validated['sort'] ?? 'latest') === 'highest_budget' ? 'desc' : 'desc';
+        if (($validated['sort'] ?? 'latest') === 'deadline') {
+            $sortDir = 'asc';
+        }
+
+        $query = Campaign::where('status', 'open')
             ->whereNotIn('id', $appliedIds)
-            ->when($user->gender, function ($q) {
+            ->when($user->gender, function ($q) use ($user) {
                 $q->where(function ($q) use ($user) {
                     $q->whereNull('target_gender')
                         ->orWhere('target_gender', 'any')
@@ -72,9 +93,21 @@ class CreatorController extends Controller
                         ->orWhere('target_age_max', '>=', $age);
                 });
             })
+            ->when($validated['category'] ?? null, fn ($q, $v) => $q->where('category', $v))
+            ->when($validated['budget_min'] ?? null, fn ($q, $v) => $q->where('budget', '>=', $v))
+            ->when($validated['budget_max'] ?? null, fn ($q, $v) => $q->where('budget', '<=', $v))
+            ->when($validated['deadline_before'] ?? null, fn ($q, $v) => $q->where('end_date', '<=', $v))
+            ->when($validated['deadline_after'] ?? null, fn ($q, $v) => $q->where('end_date', '>=', $v))
+            ->when($validated['content_type'] ?? null, function ($q, $v) {
+                $q->where('requirements', 'like', '%' . $v . '%');
+            })
             ->with('advertiser')
-            ->latest()
-            ->paginate(12);
+            ->withCount('applications')
+            ->orderBy($sortField, $sortDir);
+
+        $perPage = min($validated['per_page'] ?? 12, 50);
+
+        return $query->paginate($perPage);
     }
 
     public function apply(Request $request, Campaign $campaign)
