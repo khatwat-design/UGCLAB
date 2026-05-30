@@ -1,90 +1,92 @@
 #!/bin/bash
-# Deployment script for UGCLab platform
-# Usage: bash deploy.sh [frontend|backend|all]
-
 set -e
 
-echo "🚀 UGCLab Deployment Script"
-echo "==========================="
+echo "UGCLab Deployment Script"
+
+APP_URL="${APP_URL:-https://api.ugclab.com}"
+
+health_check() {
+    local max_attempts=30
+    local attempt=1
+
+    echo "Running health check on ${APP_URL}/api/health..."
+
+    while [ $attempt -le $max_attempts ]; do
+        local response
+        response=$(curl -sf "${APP_URL}/api/health" 2>/dev/null || true)
+
+        if echo "$response" | jq -e '.status == "ok"' >/dev/null 2>&1; then
+            echo "Health check passed! (attempt $attempt)"
+            return 0
+        fi
+
+        echo "Waiting... attempt $attempt/$max_attempts"
+        sleep 5
+        attempt=$((attempt + 1))
+    done
+
+    echo "Health check failed after $max_attempts attempts"
+    echo "Last response: $response"
+    return 1
+}
 
 deploy_backend() {
-    echo ""
-    echo "📦 Backend Deployment"
-    echo "---------------------"
-
     cd backend
-
-    # 1. Install PHP dependencies
-    echo "→ Installing PHP dependencies..."
     composer install --no-dev --optimize-autoloader --no-interaction
-
-    # 2. Clear and cache config
-    echo "→ Caching config..."
     php artisan config:cache
-
-    # 3. Cache routes
-    echo "→ Caching routes..."
     php artisan route:cache
-
-    # 4. Cache views
-    echo "→ Caching views..."
     php artisan view:cache
-
-    # 5. Run migrations
-    echo "→ Running migrations..."
     php artisan migrate --force
-
-    # 6. Create storage link (if not exists)
-    echo "→ Creating storage link..."
     php artisan storage:link --force 2>/dev/null || true
-
-    # 7. Optimize
-    echo "→ Optimizing..."
     php artisan optimize
-
     cd ..
-    echo "✅ Backend deployed successfully!"
+    echo "Backend deployed"
 }
 
 deploy_frontend() {
-    echo ""
-    echo "📦 Frontend Deployment"
-    echo "----------------------"
-
     cd frontend
-
-    # 1. Install Node dependencies
-    echo "→ Installing Node dependencies..."
-    npm ci --omit=dev
-
-    # 2. Build
-    echo "→ Building..."
+    npm ci --include=dev
     npm run build
 
-    # 3. Start (using process manager like PM2 in production)
-    echo "→ Build complete. Start with: npm start"
-    echo "   (Use PM2 or similar for production)"
+    if pm2 list 2>/dev/null | grep -q ugclab-frontend; then
+        pm2 restart ugclab-frontend --update-env
+    else
+        pm2 start npm --name ugclab-frontend -- start -- -p 3002
+    fi
 
+    pm2 save
     cd ..
-    echo "✅ Frontend built successfully!"
+    echo "Frontend deployed"
 }
 
-# Main
+deploy_docker() {
+    echo "Deploying with Docker Compose..."
+    docker compose pull
+    docker compose up -d --remove-orphans
+    echo "Docker deployment complete"
+}
+
 case "${1:-all}" in
     backend)
         deploy_backend
+        health_check
         ;;
     frontend)
         deploy_frontend
         ;;
+    docker)
+        deploy_docker
+        health_check
+        ;;
     all)
         deploy_backend
         deploy_frontend
-        echo ""
-        echo "🎉 Full deployment complete!"
+        health_check
+        ;;
+    health)
+        health_check
         ;;
     *)
-        echo "Usage: $0 [frontend|backend|all]"
-        exit 1
+        echo "Usage: $0 [frontend|backend|all|health]" && exit 1
         ;;
 esac

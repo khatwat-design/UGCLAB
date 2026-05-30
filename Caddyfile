@@ -1,0 +1,22 @@
+{
+    email admin@ugclab.com
+}
+
+api.ugclab.com {
+    reverse_proxy web:80
+    encode gzip
+    header /api/health {
+        +Access-Control-Allow-Origin *
+    }
+    log {
+        output file /data/logs/api.log
+    }
+}
+
+app.ugclab.com {
+    reverse_proxy frontend:3000
+    encode gzip
+    log {
+        output file /data/logs/frontend.log
+    }
+}
