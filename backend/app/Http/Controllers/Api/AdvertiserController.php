@@ -162,6 +162,16 @@ class AdvertiserController extends Controller
             );
         } catch (\Exception $e) {}
 
+        // Auto-create chat between advertiser and creator
+        try {
+            \App\Models\Message::create([
+                'sender_id' => auth()->id(),
+                'receiver_id' => $application->creator_id,
+                'campaign_id' => $campaign->id,
+                'content' => "مرحباً! تم قبول طلبك للحملة: {$campaign->title} 🎉 يمكننا الآن مناقشة التفاصيل",
+            ]);
+        } catch (\Exception $e) {}
+
         return response()->json($application->fresh());
     }
 
@@ -241,6 +251,16 @@ class AdvertiserController extends Controller
                 $campaign,
                 $deliverable
             );
+        } catch (\Exception $e) {}
+
+        // Close chat after payment completed
+        try {
+            \App\Models\Message::create([
+                'sender_id' => auth()->id(),
+                'receiver_id' => $application->creator_id,
+                'campaign_id' => $campaign->id,
+                'content' => "تم اكتمال الحملة: {$campaign->title} وتحويل المستحقات ✅ شكراً لتعاونك",
+            ]);
         } catch (\Exception $e) {}
 
         return response()->json($deliverable->fresh());
