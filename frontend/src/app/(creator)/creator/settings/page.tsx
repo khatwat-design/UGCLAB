@@ -3,13 +3,13 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { Toaster, toast } from 'react-hot-toast';
-import { User, Lock, Bell, Shield, Save, Camera, BadgeCheck } from 'lucide-react';
+import { User, Lock, Bell, Shield, Save, Camera, BadgeCheck, CreditCard } from 'lucide-react';
 import { CREATOR_CATEGORIES, IRAQI_GOVERNORATES } from '@/lib/constants';
 import { TabbedFormSkeleton } from '@/components/shared/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import KycForm from '@/components/KycForm';
 
-type Tab = 'profile' | 'kyc' | 'password' | 'notifications';
+type Tab = 'profile' | 'kyc' | 'payment' | 'password' | 'notifications';
 
 export default function CreatorSettings() {
   const { user, setUser } = useAuthStore();
@@ -31,6 +31,11 @@ export default function CreatorSettings() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [stateField, setStateField] = useState('');
+
+  const [paymentMethod, setPaymentMethod] = useState('zain_cash');
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentName, setPaymentName] = useState('');
+  const [paymentSaving, setPaymentSaving] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -56,6 +61,9 @@ export default function CreatorSettings() {
       setAddress(u.creator_profile?.address || '');
       setCity(u.creator_profile?.city || '');
       setStateField(u.creator_profile?.state || '');
+      setPaymentMethod(u.creator_profile?.payment_method || 'zain_cash');
+      setPaymentPhone(u.creator_profile?.payment_phone || '');
+      setPaymentName(u.creator_profile?.payment_name || '');
       if (u.notification_preferences) {
         setNotifications({ ...notifications, ...u.notification_preferences });
       }
@@ -72,6 +80,26 @@ export default function CreatorSettings() {
       toast.error(err.response?.data?.message || 'حدث خطأ');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const savePaymentMethod = async () => {
+    if (!paymentPhone || !paymentName) {
+      toast.error('يرجى ملء جميع الحقول');
+      return;
+    }
+    setPaymentSaving(true);
+    try {
+      await api.put('/creator/payout-methods', {
+        payment_method: paymentMethod,
+        payment_phone: paymentPhone,
+        payment_name: paymentName,
+      });
+      toast.success('تم حفظ بيانات الدفع بنجاح');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'حدث خطأ');
+    } finally {
+      setPaymentSaving(false);
     }
   };
 
@@ -142,6 +170,7 @@ export default function CreatorSettings() {
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'profile', label: 'الملف الشخصي', icon: User },
     ...(user?.kyc_status !== 'verified' ? [{ key: 'kyc' as Tab, label: 'توثيق الحساب', icon: Shield }] : []),
+    { key: 'payment', label: 'بيانات الدفع', icon: CreditCard },
     { key: 'password', label: 'كلمة المرور', icon: Lock },
     { key: 'notifications', label: 'الإشعارات', icon: Bell },
   ];
@@ -281,6 +310,53 @@ export default function CreatorSettings() {
               <h2 className="text-lg font-bold text-black">توثيق الحساب</h2>
             </div>
             <KycForm role={user?.role} onVerified={() => setKycRefreshKey(k => k + 1)} />
+          </div>
+        )}
+
+        {activeTab === 'payment' && (
+          <div className="space-y-4 max-w-md">
+            <h2 className="text-lg font-bold text-black">بيانات الدفع</h2>
+            <p className="text-xs text-gray-400">أضف طريقة الدفع الخاصة بك لاستلام الأرباح</p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">طريقة الدفع</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="input-field"
+              >
+                <option value="zain_cash">Zain Cash</option>
+                <option value="super_kay">Super Kay</option>
+                <option value="fib">FIB</option>
+                <option value="bank_transfer">تحويل بنكي</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">رقم الهاتف</label>
+              <input
+                type="text"
+                value={paymentPhone}
+                onChange={(e) => setPaymentPhone(e.target.value)}
+                className="input-field"
+                placeholder="07XX XXX XXXX"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">الاسم</label>
+              <input
+                type="text"
+                value={paymentName}
+                onChange={(e) => setPaymentName(e.target.value)}
+                className="input-field"
+                placeholder="الاسم الكامل"
+              />
+            </div>
+            <button
+              onClick={savePaymentMethod}
+              disabled={paymentSaving}
+              className="btn-primary disabled:opacity-50"
+            >
+              {paymentSaving ? 'جاري الحفظ...' : 'حفظ بيانات الدفع'}
+            </button>
           </div>
         )}
 

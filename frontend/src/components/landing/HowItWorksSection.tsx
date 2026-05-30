@@ -69,7 +69,7 @@ export default function HowItWorksSection() {
           <div className="inline-flex bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm">
             <button
               onClick={() => setTab('creator')}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+              className={`flex items-center gap-2.5 px-6 py-4 rounded-xl text-sm font-bold transition-all duration-300 ${
                 isCreator
                   ? 'bg-black text-white shadow-md scale-105'
                   : 'text-gray-500 hover:text-black'

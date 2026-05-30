@@ -60,8 +60,19 @@ class AdvertiserController extends Controller
             'max_creators' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        $user = auth()->user();
+        $wallet = $user->wallet;
+
+        if (!$wallet || $wallet->balance < 50) {
+            return response()->json(['message' => 'يجب أن يكون رصيد محفظتك 50 دولاراً على الأقل لإنشاء حملة'], 422);
+        }
+
+        if ($wallet->balance < $validated['budget']) {
+            return response()->json(['message' => 'رصيد المحفظة غير كافٍ. الميزانية المطلوبة: ' . number_format($validated['budget'], 2) . ' دولار، الرصيد المتاح: ' . number_format($wallet->balance, 2) . ' دولار'], 422);
+        }
+
         $data = array_merge($validated, ['status' => 'open']);
-        $campaign = auth()->user()->campaigns()->create($data);
+        $campaign = $user->campaigns()->create($data);
 
         return response()->json($campaign, 201);
     }
@@ -190,6 +201,39 @@ class AdvertiserController extends Controller
             'status' => 'approved',
             'reviewed_at' => now(),
         ]);
+
+        DB::transaction(function () use ($application, $campaign, $deliverable) {
+            $budget = $application->proposed_rate ?? $campaign->budget;
+            $platformFee = $budget * 0.10;
+            $creatorAmount = $budget - $platformFee;
+
+            $lockedAdvertiserWallet = Wallet::where('id', $campaign->advertiser->wallet->id)->lockForUpdate()->first();
+            $lockedAdvertiserWallet->decrement('balance', $budget);
+
+            $lockedAdvertiserWallet->transactions()->create([
+                'amount' => -$budget,
+                'type' => 'campaign_payment',
+                'description' => "دفعة للحملة: {$campaign->title}",
+                'reference_type' => 'deliverable',
+                'reference_id' => $deliverable->id,
+                'status' => 'completed',
+            ]);
+
+            $creatorWallet = $application->creator->wallet;
+            if ($creatorWallet) {
+                $lockedCreatorWallet = Wallet::where('id', $creatorWallet->id)->lockForUpdate()->first();
+                $lockedCreatorWallet->increment('balance', $creatorAmount);
+
+                $lockedCreatorWallet->transactions()->create([
+                    'amount' => $creatorAmount,
+                    'type' => 'payment',
+                    'description' => "مستحقات حملة: {$campaign->title}",
+                    'reference_type' => 'deliverable',
+                    'reference_id' => $deliverable->id,
+                    'status' => 'completed',
+                ]);
+            }
+        });
 
         try {
             $this->notificationService->notifyDeliverableApproved(

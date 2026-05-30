@@ -5,6 +5,47 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const words = ['المعلنين', 'العلامات', 'الشركات', 'الجمهور'];
 
+const partners = [
+  { name: 'شريك 1', image: '/partners/partner1.png' },
+  { name: 'شريك 2', image: '/partners/partner2.png' },
+  { name: 'شريك 3', image: '/partners/partner3.jpeg' },
+  { name: 'شريك 4', image: '/partners/partner4.png' },
+];
+
+function PartnersMarquee() {
+  return (
+    <div className="relative overflow-hidden" dir="ltr">
+      <motion.div
+        className="flex gap-12"
+        animate={{ x: ['0%', '-50%'] }}
+        transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+      >
+        {[...partners, ...partners].map((partner, i) => (
+          <div key={i} className="flex-shrink-0 w-20 h-16 sm:w-24 sm:h-20" title={partner.name}>
+            <img
+              src={partner.image}
+              alt={partner.name}
+              className="w-full h-full object-contain opacity-60 hover:opacity-100 transition-opacity duration-300"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const div = document.createElement('div');
+                  div.className = 'w-full h-full flex items-center justify-center text-white/20 text-sm font-medium';
+                  div.textContent = partner.name;
+                  parent.appendChild(div);
+                }
+              }}
+            />
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
 export default function HeroSection() {
   const [wordIndex, setWordIndex] = useState(0);
 
@@ -113,25 +154,13 @@ export default function HeroSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="mt-24"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.9 }}
+          className="mt-16 sm:mt-20"
         >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="inline-flex flex-col items-center gap-2 text-white/20"
-          >
-            <span className="text-xs tracking-widest uppercase">مرر</span>
-            <div className="w-5 h-8 rounded-full border border-white/20 flex items-start justify-center p-1.5">
-              <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-1.5 h-1.5 rounded-full bg-white/40"
-              />
-            </div>
-          </motion.div>
+          <p className="text-xs tracking-widest text-white/20 mb-5">شركاء النجاح</p>
+          <PartnersMarquee />
         </motion.div>
       </div>
     </section>

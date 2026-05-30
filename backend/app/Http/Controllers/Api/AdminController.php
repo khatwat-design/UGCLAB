@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\Campaign;
 use App\Models\Payment;
+use App\Models\Wallet;
 use App\Models\AdminLog;
+use App\Models\DepositRequest;
 use App\Models\CampaignApplication;
 use App\Models\SettlementRequest;
+use App\Http\Resources\DepositRequestResource;
 use App\Enums\UserRole;
 use App\Enums\CampaignStatus;
 use App\Enums\PaymentStatus;
@@ -207,7 +210,7 @@ class AdminController extends Controller
 
     public function settlementRequests(Request $request)
     {
-        $query = SettlementRequest::with('user');
+        $query = SettlementRequest::with('user.creatorProfile');
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -236,47 +239,33 @@ class AdminController extends Controller
         ]);
 
         if ($validated['action'] === 'approve') {
-            // Release all held payments for this user up to the requested amount
-            $remaining = $settlementRequest->amount;
-            $payments = Payment::where('creator_id', $settlementRequest->user_id)
-                ->where('status', 'held')
-                ->orderBy('created_at')
-                ->get();
+            // Deduct from user wallet
+            DB::transaction(function () use ($settlementRequest) {
+                $wallet = $settlementRequest->user->wallet;
+                if ($wallet) {
+                    $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
 
-            DB::transaction(function () use ($payments, $remaining, $settlementRequest) {
-                foreach ($payments as $payment) {
-                    if ($remaining <= 0) break;
-
-                    $lockedPayment = Payment::where('id', $payment->id)->lockForUpdate()->first();
-                    $netAmount = $lockedPayment->amount - $lockedPayment->platform_fee;
-
-                    $lockedPayment->update([
-                        'status' => 'released',
-                        'released_at' => now(),
-                    ]);
-
-                    $wallet = $lockedPayment->creator->wallet;
-                    if ($wallet) {
-                        $lockedWallet = \App\Models\Wallet::where('id', $wallet->id)->lockForUpdate()->first();
-                        $lockedWallet->increment('balance', $netAmount);
-                        $lockedWallet->transactions()->create([
-                            'amount' => $netAmount,
-                            'type' => 'payment',
-                            'description' => "Settlement release for campaign #{$lockedPayment->campaign_id}",
-                            'reference_type' => 'settlement_request',
-                            'reference_id' => $settlementRequest->id,
-                            'status' => 'completed',
-                        ]);
+                    if ($lockedWallet->balance < $settlementRequest->amount) {
+                        throw new \Exception('Insufficient wallet balance');
                     }
 
-                    $remaining -= $lockedPayment->amount;
+                    $lockedWallet->decrement('balance', $settlementRequest->amount);
+
+                    $lockedWallet->transactions()->create([
+                        'amount' => -$settlementRequest->amount,
+                        'type' => 'settlement',
+                        'description' => 'سحب أرباح إلى المحفظة الخارجية',
+                        'reference_type' => 'settlement_request',
+                        'reference_id' => $settlementRequest->id,
+                        'status' => 'completed',
+                    ]);
 
                     AdminLog::create([
                         'admin_id' => auth()->id(),
-                        'action' => 'release_payment',
-                        'target_type' => 'payment',
-                        'target_id' => $lockedPayment->id,
-                        'metadata' => ['settlement_request_id' => $settlementRequest->id],
+                        'action' => 'process_settlement',
+                        'target_type' => 'settlement_request',
+                        'target_id' => $settlementRequest->id,
+                        'metadata' => ['amount' => $settlementRequest->amount],
                     ]);
                 }
             });
@@ -291,5 +280,81 @@ class AdminController extends Controller
         } catch (\Exception $e) {}
 
         return response()->json($settlementRequest->fresh());
+    }
+
+    // Deposit request management
+    public function depositRequests(Request $request)
+    {
+        $query = DepositRequest::with('user');
+
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        return DepositRequestResource::collection(
+            $query->latest()->paginate(20)
+        );
+    }
+
+    public function reviewDeposit(Request $request, DepositRequest $depositRequest)
+    {
+        if ($depositRequest->status !== 'pending') {
+            return response()->json(['message' => 'تمت معالجة طلب الإيداع بالفعل'], 422);
+        }
+
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'in:approve,reject'],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $newStatus = $validated['action'] === 'approve' ? 'approved' : 'rejected';
+
+        $depositRequest->update([
+            'status' => $newStatus,
+            'admin_notes' => $validated['admin_notes'] ?? null,
+            'processed_at' => now(),
+        ]);
+
+        if ($validated['action'] === 'approve') {
+            DB::transaction(function () use ($depositRequest) {
+                $wallet = $depositRequest->user->wallet;
+                if ($wallet) {
+                    $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
+                    $lockedWallet->increment('balance', $depositRequest->amount);
+
+                    $lockedWallet->transactions()->create([
+                        'amount' => $depositRequest->amount,
+                        'type' => 'deposit',
+                        'description' => 'إيداع عبر تحميل إيصال',
+                        'reference_type' => 'deposit_request',
+                        'reference_id' => $depositRequest->id,
+                        'status' => 'completed',
+                    ]);
+                }
+            });
+        }
+
+        AdminLog::create([
+            'admin_id' => auth()->id(),
+            'action' => $validated['action'] === 'approve' ? 'approve_deposit' : 'reject_deposit',
+            'target_type' => 'deposit_request',
+            'target_id' => $depositRequest->id,
+            'metadata' => ['amount' => $depositRequest->amount],
+        ]);
+
+        try {
+            $this->notificationService->send(
+                $depositRequest->user,
+                'deposit_' . $newStatus,
+                [
+                    'message' => $validated['action'] === 'approve'
+                        ? "تم قبول طلب الإيداع بمبلغ {$depositRequest->amount} دولار وتم إضافة الرصيد إلى محفظتك"
+                        : "تم رفض طلب الإيداع بمبلغ {$depositRequest->amount} دولار" . ($validated['admin_notes'] ? "، السبب: {$validated['admin_notes']}" : ''),
+                    'amount' => $depositRequest->amount,
+                ]
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json(new DepositRequestResource($depositRequest->fresh()));
     }
 }

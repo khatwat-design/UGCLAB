@@ -264,6 +264,37 @@ class CreatorController extends Controller
         return response()->json($profile);
     }
 
+    public function payoutMethods()
+    {
+        $profile = auth()->user()->creatorProfile;
+
+        return response()->json([
+            'payment_method' => $profile->payment_method,
+            'payment_phone' => $profile->payment_phone,
+            'payment_name' => $profile->payment_name,
+        ]);
+    }
+
+    public function updatePayoutMethods(Request $request)
+    {
+        $profile = auth()->user()->creatorProfile;
+
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'in:zain_cash,super_kay,fib,bank_transfer'],
+            'payment_phone' => ['required', 'string', 'max:50'],
+            'payment_name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $profile->update($validated);
+
+        return response()->json([
+            'message' => 'تم حفظ بيانات الدفع بنجاح',
+            'payment_method' => $profile->payment_method,
+            'payment_phone' => $profile->payment_phone,
+            'payment_name' => $profile->payment_name,
+        ]);
+    }
+
     public function discoverCreators(Request $request)
     {
         $validated = $request->validate([

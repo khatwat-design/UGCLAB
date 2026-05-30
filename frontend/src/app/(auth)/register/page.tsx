@@ -200,7 +200,7 @@ function RegisterWizard() {
                 {i < step ? <CheckCircle className="w-4 h-4" /> : i + 1}
               </div>
               {i < steps.length - 1 && (
-                <div className={`w-12 sm:w-20 h-0.5 mx-1 transition-colors ${i < step ? 'bg-black' : 'bg-gray-200'}`} />
+                <div className={`w-8 sm:w-20 h-0.5 mx-1 transition-colors ${i < step ? 'bg-black' : 'bg-gray-200'}`} />
               )}
             </div>
           ))}
@@ -355,7 +355,7 @@ function RegisterWizard() {
                                 onClick={() => setPlatforms(prev =>
                                   selected ? prev.filter(x => x !== p.value) : [...prev, p.value]
                                 )}
-                                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs border transition-all ${
+                                className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm border transition-all ${
                                   selected
                                     ? 'bg-black text-white border-black'
                                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'

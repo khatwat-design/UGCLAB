@@ -23,22 +23,31 @@ export default function AdvertiserBilling() {
   const [depositAmount, setDepositAmount] = useState('');
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showReceiptDeposit, setShowReceiptDeposit] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wallet, setWallet] = useState<any>(null);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
+  const [depositRequests, setDepositRequests] = useState<any[]>([]);
+  const [receiptAmount, setReceiptAmount] = useState('');
+  const [receiptMethod, setReceiptMethod] = useState('zain_cash');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptSubmitting, setReceiptSubmitting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       api.get('/payments/transactions').then((r) => setTransactions(r.data.data || [])),
       api.get('/wallet').then((r) => setWallet(r.data)).catch(() => {}),
+      api.get('/payments/deposit-requests').then((r) => setDepositRequests(r.data.data || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
   const refresh = () => {
     api.get('/payments/transactions').then((r) => setTransactions(r.data.data || []));
     api.get('/wallet').then((r) => setWallet(r.data)).catch(() => {});
+    api.get('/payments/deposit-requests').then((r) => setDepositRequests(r.data.data || [])).catch(() => {});
   };
 
   const handleDeposit = async () => {
@@ -83,6 +92,37 @@ export default function AdvertiserBilling() {
     }
   };
 
+  const handleReceiptDeposit = async () => {
+    if (!receiptAmount || parseFloat(receiptAmount) <= 0) {
+      toast.error('الرجاء إدخال مبلغ صحيح');
+      return;
+    }
+    if (!receiptFile) {
+      toast.error('الرجاء تحميل صورة الإيصال');
+      return;
+    }
+    setReceiptSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('amount', receiptAmount);
+      formData.append('payment_method', receiptMethod);
+      formData.append('receipt_image', receiptFile);
+      await api.post('/payments/deposit-requests', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('تم تقديم طلب الإيداع، في انتظار مراجعة المشرف');
+      setShowReceiptDeposit(false);
+      setReceiptAmount('');
+      setReceiptFile(null);
+      setReceiptPreview(null);
+      refresh();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'حدث خطأ');
+    } finally {
+      setReceiptSubmitting(false);
+    }
+  };
+
   const paymentMethods = [
     { name: 'Zain Cash', desc: 'محفظة زين كاش', icon: '💳' },
     { name: 'FIB', desc: 'FIB الإماراتي', icon: '🏦' },
@@ -124,6 +164,13 @@ export default function AdvertiserBilling() {
           >
             <Plus className="w-4 h-4" />
             إيداع
+          </button>
+          <button
+            onClick={() => setShowReceiptDeposit(true)}
+            className="inline-flex items-center gap-1.5 bg-white text-gray-700 px-4 py-2.5 rounded-xl text-sm font-bold border border-gray-200 hover:border-gray-400 hover:text-black transition-all"
+          >
+            <CreditCard className="w-4 h-4" />
+            إيداع بإيصال
           </button>
         </div>
       </motion.div>
@@ -178,6 +225,37 @@ export default function AdvertiserBilling() {
           ))}
         </div>
       </motion.div>
+
+      {depositRequests.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="bg-white rounded-xl border border-gray-200 p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard className="w-4 h-4 text-gray-500" />
+            <h2 className="text-sm font-bold text-black">طلبات الإيداع</h2>
+          </div>
+          <div className="space-y-2">
+            {depositRequests.map((dr: any) => (
+              <div key={dr.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100">
+                <div>
+                  <p className="text-sm text-black font-medium">${Number(dr.amount).toFixed(2)}</p>
+                  <p className="text-xs text-gray-400">{new Date(dr.created_at).toLocaleDateString('ar-IQ')}</p>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  dr.status === 'approved' ? 'bg-green-50 text-green-700' :
+                  dr.status === 'rejected' ? 'bg-red-50 text-red-600' :
+                  'bg-amber-50 text-amber-700'
+                }`}>
+                  {dr.status === 'approved' ? 'تمت الموافقة' : dr.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -329,6 +407,102 @@ export default function AdvertiserBilling() {
                 </button>
                 <button
                   onClick={() => setShowDeposit(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showReceiptDeposit && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowReceiptDeposit(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-5 shadow-xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-black">إيداع بإيصال</h3>
+                  <p className="text-xs text-gray-400">قم بتحميل صورة الإيصال للمراجعة</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">المبلغ ($)</label>
+                <input
+                  type="number"
+                  value={receiptAmount}
+                  onChange={(e) => setReceiptAmount(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-lg font-bold text-center focus:border-black outline-none transition-colors"
+                  placeholder="0.00"
+                  min="1"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">طريقة الدفع</label>
+                <select
+                  value={receiptMethod}
+                  onChange={(e) => setReceiptMethod(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-black outline-none transition-colors"
+                >
+                  <option value="zain_cash">Zain Cash</option>
+                  <option value="super_kay">Super Kay</option>
+                  <option value="fib">FIB</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">صورة الإيصال</label>
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 transition-colors">
+                  {receiptPreview ? (
+                    <img src={receiptPreview} alt="Receipt" className="h-full object-contain p-2" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <CreditCard className="w-6 h-6 text-gray-300" />
+                      <span className="text-xs text-gray-400">اضغط لرفع الإيصال</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setReceiptFile(file);
+                        setReceiptPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleReceiptDeposit}
+                  disabled={receiptSubmitting || !receiptFile || !receiptAmount}
+                  className="flex-1 bg-black text-white py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 hover:shadow-lg"
+                >
+                  {receiptSubmitting ? 'جاري...' : 'تقديم الطلب'}
+                </button>
+                <button
+                  onClick={() => { setShowReceiptDeposit(false); setReceiptFile(null); setReceiptPreview(null); }}
                   className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-all"
                 >
                   إلغاء

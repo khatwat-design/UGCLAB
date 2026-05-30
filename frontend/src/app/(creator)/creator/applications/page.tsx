@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import Badge from '@/components/shared/Badge';
 import { formatDate } from '@/lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
-import { ChevronLeft, ChevronRight, Upload, Film, FileText, Package, Truck, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, FileText, Package, Truck, Check } from 'lucide-react';
 import { AppListSkeleton } from '@/components/shared/Skeleton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -143,6 +143,48 @@ export default function CreatorApplications() {
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0 mr-4">
+                    <div className="flex items-center gap-1 mb-1" dir="ltr">
+                      {(() => {
+                        const hasRevision = app.deliverables?.some((d: any) => d.status === 'revision_requested');
+                        const steps = hasRevision
+                          ? ['pending', 'accepted', 'delivered', 'revision', 'approved', 'completed']
+                          : ['pending', 'accepted', 'delivered', 'approved', 'completed'];
+                        const statusOrder = ['pending', 'accepted', 'delivered', 'revision', 'approved', 'completed'];
+                        const appStatus = app.status === 'in_revision' ? 'delivered' : app.status;
+                        const currentIdx = statusOrder.indexOf(appStatus === 'completed' ? 'completed' : appStatus);
+                        const isCompleted = app.status === 'completed';
+                        const stepLabels: Record<string, string> = {
+                          pending: 'معلق', accepted: 'مقبول', delivered: 'تسليم',
+                          revision: 'تعديل', approved: 'موافقة', completed: 'اكتمال',
+                        };
+                        return steps.map((step, i) => {
+                          const stepIdx = statusOrder.indexOf(step);
+                          const isDone = stepIdx <= currentIdx && !isCompleted;
+                          return (
+                            <div key={step} className="flex items-center">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold relative ${
+                                isCompleted && step === 'completed' ? 'bg-green-600 text-white' :
+                                step === 'revision' && hasRevision && currentIdx > stepIdx ? 'bg-amber-500 text-white' :
+                                isDone ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'
+                              }`}>
+                                {isCompleted && step === 'completed' ? '✓' : stepIdx + 1}
+                              </div>
+                              {step === 'revision' && (
+                                <span className="text-[7px] text-amber-600 absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-bold">
+                                  تعديل
+                                </span>
+                              )}
+                              {i < steps.length - 1 && (
+                                <div className={`w-3 h-px mx-0.5 ${
+                                  stepIdx < currentIdx && !isCompleted ? 'bg-black' :
+                                  isCompleted ? 'bg-green-400' : 'bg-gray-200'
+                                }`} />
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
                     <Badge status={app.status} />
                     {(app.status === 'accepted' || app.status === 'revision_requested') && (
                       <>

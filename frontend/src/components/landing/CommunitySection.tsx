@@ -77,7 +77,7 @@ export default function CommunitySection() {
             <button
               key={f.key}
               onClick={() => setFilter(f.key as typeof filter)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${
+              className={`px-5 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
                 filter === f.key
                   ? 'bg-black text-white shadow-md scale-105'
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
