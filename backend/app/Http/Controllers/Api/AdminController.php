@@ -169,6 +169,7 @@ class AdminController extends Controller
                 $payment->amount - $payment->platform_fee
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($payment->fresh());
@@ -277,6 +278,7 @@ class AdminController extends Controller
                 $newStatus
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($settlementRequest->fresh());
@@ -294,7 +296,7 @@ class AdminController extends Controller
             'platform_revenue' => Payment::where('status', 'released')->sum('platform_fee'),
             'payments_held' => Payment::where('status', 'held')->sum('amount'),
             'payments_released' => Payment::where('status', 'released')->sum('amount'),
-            'pending_kyc' => User::where('kyc_status', 'pending')->count(),
+            'pending_kyc' => \App\Models\KycDocument::where('status', 'pending')->count(),
             'total_wallet_balance' => Wallet::sum('balance'),
             'total_wallet_pending' => Wallet::sum('pending_balance'),
             'pending_deposits' => DepositRequest::where('status', 'pending')->count(),
@@ -317,11 +319,19 @@ class AdminController extends Controller
             '45_plus' => ['min' => 45, 'max' => 120],
         ];
         $ageStats = [];
+        $driver = \DB::connection()->getDriverName();
         foreach ($ageRanges as $label => $range) {
-            $count = User::whereNotNull('date_of_birth')
-                ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) >= ?', [$now, $range['min']])
-                ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) <= ?', [$now, $range['max']])
-                ->count();
+            if ($driver === 'sqlite') {
+                $count = User::whereNotNull('date_of_birth')
+                    ->whereRaw("CAST(strftime('%Y.%m%d', 'now') - strftime('%Y.%m%d', date_of_birth) AS INTEGER) >= ?", [$range['min']])
+                    ->whereRaw("CAST(strftime('%Y.%m%d', 'now') - strftime('%Y.%m%d', date_of_birth) AS INTEGER) <= ?", [$range['max']])
+                    ->count();
+            } else {
+                $count = User::whereNotNull('date_of_birth')
+                    ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) >= ?', [$now, $range['min']])
+                    ->whereRaw('TIMESTAMPDIFF(YEAR, date_of_birth, ?) <= ?', [$now, $range['max']])
+                    ->count();
+            }
             $ageStats[$label] = $count;
         }
 
@@ -348,14 +358,15 @@ class AdminController extends Controller
             ->get();
 
         // ── Monthly registrations (last 12 months) ──
-        $monthlyRegistrations = User::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
+        $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m', created_at)" : "DATE_FORMAT(created_at, '%Y-%m')";
+        $monthlyRegistrations = User::selectRaw("{$dateFormat} as month, COUNT(*) as count")
             ->where('created_at', '>=', now()->subMonths(12))
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month');
 
         // ── Monthly campaigns created ──
-        $monthlyCampaigns = Campaign::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
+        $monthlyCampaigns = Campaign::selectRaw("{$dateFormat} as month, COUNT(*) as count")
             ->where('created_at', '>=', now()->subMonths(12))
             ->groupBy('month')
             ->orderBy('month')
@@ -363,7 +374,7 @@ class AdminController extends Controller
 
         // ── Monthly revenue (last 12 months) ──
         $monthlyRevenue = Payment::where('status', 'released')
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, SUM(platform_fee) as total")
+            ->selectRaw("{$dateFormat} as month, SUM(platform_fee) as total")
             ->where('created_at', '>=', now()->subMonths(12))
             ->groupBy('month')
             ->orderBy('month')
@@ -468,6 +479,7 @@ class AdminController extends Controller
                 ]
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json(new DepositRequestResource($depositRequest->fresh()));

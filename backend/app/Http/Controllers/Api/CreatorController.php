@@ -143,6 +143,7 @@ class CreatorController extends Controller
                 $campaign
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($application->load('campaign'), 201);
@@ -244,6 +245,7 @@ class CreatorController extends Controller
                 ]
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($deliverable->load('application.campaign'), 201);
@@ -271,6 +273,7 @@ class CreatorController extends Controller
                 $application
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($application->fresh());
@@ -311,6 +314,7 @@ class CreatorController extends Controller
                 );
             }
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($settlementRequest, 201);

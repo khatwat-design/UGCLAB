@@ -138,6 +138,7 @@ class KycController extends Controller
                 ]
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($document->fresh());

@@ -70,6 +70,7 @@ class ReviewController extends Controller
                 ]
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($review->load(['reviewer', 'reviewee']), 201);

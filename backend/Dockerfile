@@ -30,9 +30,9 @@ COPY . .
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN php artisan optimize
+RUN php artisan optimize && php artisan storage:link
 
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chown -R www-data:www-data storage bootstrap/cache public/storage
 
 EXPOSE 9000
 

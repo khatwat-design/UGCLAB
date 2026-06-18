@@ -16,7 +16,7 @@ class MediaController extends Controller
             'collection' => ['required', 'string', 'in:portfolio,deliverable,avatar,kyc,general'],
         ]);
 
-        $file = $validated['file'];
+        $file = $request->file('file');
         $collection = $validated['collection'];
         $user = $request->user();
 

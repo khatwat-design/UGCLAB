@@ -18,6 +18,11 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Health check
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'time' => now()]);
+});
+
 // Public routes (with rate limiting)
 Route::post('/auth/login', [AuthController::class, 'login'])
     ->middleware('throttle:auth')

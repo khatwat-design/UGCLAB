@@ -217,11 +217,15 @@ class AuthController extends Controller
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-        // In production, send this token via email
-        // For now, return it directly (dev mode only)
+        if (app()->environment('local')) {
+            return response()->json([
+                'message' => 'Password reset link sent to your email',
+                'reset_token' => $token,
+            ]);
+        }
+
         return response()->json([
             'message' => 'Password reset link sent to your email',
-            'reset_token' => $token,
         ]);
     }
 

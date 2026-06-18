@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdvertiserController extends Controller
 {
@@ -164,6 +165,7 @@ class AdvertiserController extends Controller
                 'accepted'
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         // Auto-create chat between advertiser and creator
@@ -175,6 +177,7 @@ class AdvertiserController extends Controller
                 'content' => "مرحباً! تم قبول طلبك للحملة: {$campaign->title} 🎉 يمكننا الآن مناقشة التفاصيل",
             ]);
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($application->fresh());
@@ -199,6 +202,7 @@ class AdvertiserController extends Controller
                 'rejected'
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($application->fresh());
@@ -258,6 +262,7 @@ class AdvertiserController extends Controller
                 $deliverable
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         // Close chat after payment completed
@@ -269,6 +274,7 @@ class AdvertiserController extends Controller
                 'content' => "تم اكتمال الحملة: {$campaign->title} وتحويل المستحقات ✅ شكراً لتعاونك",
             ]);
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($deliverable->fresh());
@@ -306,6 +312,7 @@ class AdvertiserController extends Controller
                 $deliverable
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($deliverable->fresh());
@@ -342,6 +349,7 @@ class AdvertiserController extends Controller
                 $application
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($application->fresh());
@@ -392,6 +400,7 @@ class AdvertiserController extends Controller
                 $deliverable
             );
         } catch (\Exception $e) {
+        report($e);
         }
 
         return response()->json($deliverable->fresh());
